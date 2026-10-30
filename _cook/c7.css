@@ -1,0 +1,515 @@
+/* ===== 弹窗通用：四周留空 ===== */
+#veil { padding: 16px; }
+#sheet { max-height: calc(100vh - 32px); }
+/* 牌组窗口：大小固定，不随页签内容变化，牌在内部滚动 */
+#sheet.deckwin { display: flex; flex-direction: column; width: 92vw; max-width: 900px; height: 78vh; max-height: 680px; overflow: hidden; }
+#sheet.deckwin > * { flex: none; }
+#sheet.deckwin #dkList { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; margin: 10px -6px 4px; padding: 6px 6px 10px; }
+#sheet.deckwin .btns { margin-top: 10px; }
+
+/* ===== 竖屏手机（≤600px）：整体缩小，牌不叠放 ===== */
+@media (max-width: 600px) {
+  :root { --cw: 66px; --ch: 92px; }
+  #app { padding: 12px 12px 14px; padding-top: calc(12px + var(--top-avoid, 0px)); grid-gap: 10px; gap: 10px; min-height: 0; }
+  @supports (padding-top: env(safe-area-inset-top)) {
+    #app { padding-top: calc(12px + var(--top-avoid, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))));
+      padding-bottom: calc(14px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+      padding-left: calc(12px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
+      padding-right: calc(12px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); }
+  }
+  #main { gap: 10px; }
+  .no-flex-gap #main > * + * { margin-top: 10px; }
+
+  /* 小票：两行紧凑排布 */
+  #ticket { grid-template-columns: auto 1fr auto; grid-gap: 6px 10px; gap: 6px 10px; padding: 14px 12px 10px; }
+  #ticket .clip { width: 48px; height: 16px; margin-left: -24px; top: -7px; }
+  #lvname { font-size: 18px; }
+  .qm { width: 24px; height: 24px; font-size: 13px; margin-left: 6px; }
+  #pips i { width: 13px; height: 13px; } #pips i.boss { width: 16px; height: 16px; margin-top: -1px; }
+  .t-score .lb { display: none; }
+  #got { font-size: 32px; }
+  #bar { height: 7px; margin-top: 4px; }
+  #calc { width: 118px; grid-gap: 4px; gap: 4px; }
+  #calc .box { height: 32px; font-size: 18px; border-radius: 8px; }
+  #calc .x { font-size: 15px; }
+  .cnt { padding: 3px 0 2px; border-radius: 8px; }
+  .cnt b { font-size: 18px; } .cnt span { font-size: 11px; }
+  #coinIco { width: 20px; height: 20px; } #coins { font-size: 22px; }
+  #interest { font-size: 11px; }
+  .bosschip { padding: 5px 7px; } .bosschip .av { width: 26px; height: 26px; padding: 4px; }
+  .bosschip b { font-size: 13px; } .bosschip span { font-size: 12px; }
+  #helpers .hchip { width: 26px; height: 26px; padding: 4px; }
+
+  /* 菜谱水牌：缩小 */
+  #rail { min-height: 0; padding-top: 4px; }
+  #rail::before { top: 3px; height: 5px; }
+  #rules { min-height: 0; gap: 8px; padding: 0 4px 8px; }
+  .no-flex-gap #rules > * + * { margin-left: 8px; }
+  .rule { width: 46px; min-height: 82px; margin-top: 10px; padding: 7px 2px 5px; border-radius: 4px 4px 9px 9px; }
+  .rule::before { top: -10px; height: 12px; }
+  .rule .rc .ic { width: 14px; height: 14px; }
+  .rule .rn { font-size: 13px; margin: 3px 0; } .rule .rn.l { font-size: 11px; }
+  .rule .eq .fxp { font-size: 10px; height: 15px; line-height: 15px; padding: 0 4px; }
+  .rule .x { min-width: 18px; height: 18px; font-size: 10px; line-height: 18px; right: -6px; }
+  .rule .lv { height: 15px; font-size: 10px; line-height: 15px; left: -5px; }
+
+  /* 灶台：缩小，槽位按网格排开、放不下就换行 */
+  #stove { padding: 8px 10px 24px; border-radius: 16px; }
+  #equips, #spices { top: 8px; } #equips { left: 10px; }
+  .chipx { height: 22px; font-size: 12px; padding: 0 7px 0 4px; } .chipx .ic { width: 17px; height: 17px; }
+  #pot { margin-top: 28px; height: calc(var(--ch) + 24px); }
+  #flame { bottom: 5px; gap: 9px; height: 14px; } #flame i { width: 10px; }
+  .no-flex-gap #flame > * + * { margin-left: 9px; }
+  #warn { bottom: 2px; font-size: 15px; }
+  #warn .ic { width: 16px; height: 16px; }
+
+  /* 卡面缩小 */
+  .cf { border-radius: 10px; }
+
+  /* 手牌：扇形；选中沿牌的角度弹出 */
+  #board { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "hand hand" "piles acts"; grid-gap: 10px 12px; gap: 10px 12px; }
+  #hand { height: calc(var(--ch) + 46px); }
+  #hand .card { bottom: 10px; }
+  #hand .card.peek .cf { transform: translateY(-14px); }
+  #hand .card.sel .cf, #hand .card.sel.peek .cf { transform: translateY(-24px); box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--ember), 0 12px 14px -8px rgba(30,15,0,.7); }
+
+  /* 牌堆和按钮 */
+  #piles { gap: 10px; padding-bottom: 0; align-items: flex-end; }
+  .no-flex-gap #piles > * + * { margin-top: 0; margin-left: 10px; }
+  .pile { width: 40px; height: 56px; } .pile i { border-radius: 6px; }
+  .pile b { font-size: 17px; left: calc(50% + 3px); top: calc(50% - 3px); }
+  .pile.dis { width: 34px; height: 48px; } .pile.dis b { font-size: 14px; left: 50%; top: 50%; }
+  .pile i:nth-child(2) { transform: translate(2px, -2px); } .pile i:nth-child(3) { transform: translate(4px, -4px); }
+  #acts { width: auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px; grid-template-rows: 56px; grid-gap: 8px; gap: 8px; padding-bottom: 4px; }
+  .act { font-size: 18px; border-radius: 14px; white-space: nowrap; padding: 0 6px; flex-direction: row; gap: 5px; letter-spacing: 0; } .act.play, .act.disc { font-size: 18px; flex-direction: row; gap: 5px; }
+  .no-flex-gap .act > * + * { margin-top: 0; margin-left: 5px; }
+  .act .ico, .act.disc .ico, .act.sort .ico { width: 22px; height: 22px; flex: none; }
+
+  /* 弹窗：四周留空，字号缩小 */
+  #veil { padding: 12px; }
+  #sheet { width: 100%; max-width: none; padding: 18px 14px 16px; border-radius: 18px; max-height: calc(100vh - 24px); }
+  #sheet.wide { width: 100%; padding: 16px 12px; }
+  #sheet h1 { font-size: 28px; }
+  #sheet .big { font-size: 42px; }
+  .pill { height: 44px; font-size: 17px; padding: 0 18px; }
+  .btns { margin-top: 12px; }
+  .bill { font-size: 16px; } .bill .ln.tot b { font-size: 28px; }
+  #sheet.deckwin { width: 100%; height: 72vh; max-height: 600px; padding: 14px 12px 12px; }
+  #sheet.deckwin h1 { font-size: 22px; }
+  #sheet.deckwin .sub { font-size: 13px !important; margin-top: 2px; }
+  #sheet.deckwin .tabs { margin: 8px 0 4px; }
+  #sheet.deckwin .pill { height: 40px; font-size: 15px; }
+  #sheet.deckwin .tabs .tab { height: 34px; padding: 0 10px; font-size: 14px; }
+  #sheet .legend { gap: 8px; font-size: 12px; }
+
+  /* 牌组窗口里的牌：网格，不叠放 */
+  .fan { height: 96px; } .fan .card { --cw: 62px; --ch: 86px; top: 6px; }
+  .pv-t { font-size: 14px; margin-bottom: 5px; }
+
+  /* 商店 */
+  .shop-top { margin-bottom: 8px; gap: 8px; } .shop-top .wallet { font-size: 22px; }
+  .blk-in { padding: 8px 8px 10px; gap: 8px; }
+  .ware { width: 72px; }
+  .card.recipe { width: 72px; }
+  .ware .kind { font-size: 10px; white-space: nowrap; }
+  .card.helper .cf, .card.pack .cf { padding: 6px 4px; }
+  #boxes .bx-items { min-height: 0; }
+  #boxes .tile2.box { padding: 8px 10px; }
+  .blk > header span { font-size: 11px; }
+  .card.recipe .rnm { font-size: 14px; top: 9px; } .card.recipe .rnm.l { font-size: 12px; }
+  .card.recipe .combo { top: 34px; } .card.recipe .combo .ic { width: 22px; height: 22px; }
+  .card.recipe .eff .fxp { font-size: 11px; height: 17px; }
+  .ware .cost { font-size: 15px; height: 24px; padding: 0 9px; }
+  .howto, .help { font-size: 14px; }
+}
+/* 窄屏：一行至少放 5 张牌 */
+@media (max-width: 400px) {
+  :root { --cw: 60px; --ch: 84px; }
+}
+/* 矮屏（如 375×667）：整体再压一档，保证一屏放得下 */
+@media (max-width: 600px) and (max-height: 760px) {
+  :root { --cw: 56px; --ch: 78px; }
+  #app { padding-top: calc(10px + var(--top-avoid, 0px)); padding-bottom: 10px; grid-gap: 8px; gap: 8px; }
+  #main { gap: 8px; } .no-flex-gap #main > * + * { margin-top: 8px; }
+  #ticket { padding: 11px 10px 7px; grid-gap: 4px 10px; gap: 4px 10px; }
+  #lvname { font-size: 16px; } #got { font-size: 26px; }
+  #calc .box { height: 28px; font-size: 16px; }
+  .cnt b { font-size: 16px; } .cnt span { font-size: 10px; }
+  #coins { font-size: 19px; }
+  .rule { min-height: 62px; width: 40px; margin-top: 9px; padding: 6px 2px 4px; }
+  .rule .rc .ic { width: 12px; height: 12px; }
+  .rule .rn { font-size: 11px; margin: 2px 0; } .rule .rn.l { font-size: 9px; }
+  .rule .eq .fxp { font-size: 9px; height: 13px; line-height: 13px; }
+  #rules { padding-bottom: 6px; }
+  #stove { padding: 6px 8px 18px; }
+  #pot { margin-top: 24px; height: calc(var(--ch) + 20px); }
+  #flame { height: 11px; } #flame i { width: 8px; }
+  #acts { grid-template-rows: 50px; }
+  .pile { width: 34px; height: 48px; } .pile.dis { width: 30px; height: 42px; } .pile b { font-size: 15px; }
+}
+/* 高屏手机（如 390×844）：底部空余多，牌和灶台放大一档 */
+@media (max-width: 600px) and (min-height: 800px) {
+  :root { --cw: 74px; --ch: 104px; }
+  .rule { width: 50px; min-height: 92px; } .rule .rn { font-size: 14px; }
+  #pot { margin-top: 32px; height: calc(var(--ch) + 28px); }
+  #stove { padding-bottom: 28px; }
+  #hand { height: calc(var(--ch) + 54px); }
+  #acts { grid-template-rows: 60px; }
+}
+
+/* ===== 分数：总分 / 目标分 ===== */
+.t-score .sc { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.t-score .of { font-size: 22px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.t-score .of b { font-size: inherit; margin-left: 3px; color: var(--ink); }
+.no-flex-gap .t-score .sc > * + * { margin-left: 4px; }
+@media (max-width: 900px) { .t-score .lb { display: none; } .t-score .of { font-size: 18px; } }
+@media (max-width: 600px) { .t-score .of { font-size: 15px; } }
+
+/* ===== 商店窗口：和牌组窗口一样大小固定、四周留空、不滚动 ===== */
+#sheet.shopwin { display: flex; flex-direction: column; width: 92vw; max-width: 900px; height: 78vh; max-height: 680px; min-height: 0; overflow: hidden; padding: 18px 20px 16px; text-align: left; }
+#sheet.shopwin > * { flex: none; }
+#sheet.shopwin .shop-top { margin-bottom: 10px; }
+#sheet.shopwin .shop-top h1 { font-size: 34px; }
+#sheet.shopwin .shop { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 250px; grid-template-rows: minmax(0, 1fr) auto; grid-gap: 12px; gap: 12px; }
+#sheet.shopwin .blk { display: flex; flex-direction: column; min-height: 0; }
+#sheet.shopwin .blk > header { flex: none; }
+#sheet.shopwin .blk-in { flex: 1 1 auto; min-height: 0; }
+#sheet.shopwin .blk.wood { grid-column: 1 / -1; }
+#sheet.shopwin #shelf { flex-wrap: nowrap; align-items: center; gap: 14px; }
+#sheet.shopwin .btns { margin-top: 12px; flex-wrap: nowrap; }
+.blk > header .rr { margin-left: 10px; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 8px; border-radius: 14px; background: rgba(43,36,32,.32); color: var(--cream); font-size: 14px; box-shadow: 0 2px 0 rgba(43,36,32,.3); }
+.blk > header .rr .ic { width: 15px; height: 15px; }
+.blk > header .rr .cost { display: inline-flex; align-items: center; gap: 2px; margin-left: 2px; color: var(--gold); }
+.blk > header .rr .cost .ic { color: var(--gold); }
+.blk > header .rr .cost.no { color: #FFB4A3 !important; }
+.blk > header .rr:disabled { opacity: .5; cursor: default; }
+.no-flex-gap .blk > header .rr > * + * { margin-left: 4px; }
+
+/* 包：同一种样式，左边图标按种类上色 */
+#packs { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 10px; gap: 10px; align-content: center; }
+.pkb { --c: var(--spice); position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-gap: 10px; gap: 10px; align-items: center; padding: 10px 12px 10px 10px; border-radius: 14px;
+  background: var(--cream); color: var(--ink); text-align: left; font: inherit; box-shadow: 0 4px 0 rgba(0,0,0,.16); transition: transform .12s, box-shadow .12s; }
+.pkb:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,.16); }
+.pkb:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.16); }
+.pkb:disabled { opacity: .5; cursor: default; }
+.pkb.sold { opacity: .4; }
+.pk-ic { position: relative; width: 52px; height: 52px; border-radius: 13px; background: var(--c); color: var(--cream); padding: 11px; box-shadow: inset 0 -4px 0 rgba(0,0,0,.18); }
+.pk-ic > i { position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 50%; background: var(--cream); color: var(--c); padding: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pk-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pk-tx b { font-size: 18px; line-height: 1.1; white-space: nowrap; }
+.pk-tx small { font-size: 13px; line-height: 1.2; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkb .cost { display: inline-flex; align-items: center; gap: 2px; font-size: 18px; color: var(--gold-d); white-space: nowrap; }
+.pkb .cost .ic { width: 16px; height: 16px; }
+.pkb.box, .pkb.ing { --c: var(--ing); } .pkb.tech { --c: var(--tech); } .pkb.recipe { --c: var(--rec); }
+.pkb.up { --c: var(--ember-d); } .pkb.stamp, .pkb.spice { --c: var(--spice); } .pkb.trim { --c: var(--equip); }
+.no-flex-gap .pk-tx > * + * { margin-top: 3px; }
+
+/* 伙计：三个格子 */
+#sheet.shopwin .blk.hl .blk-in { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 8px; gap: 8px; align-content: center; }
+#sheet.shopwin .hslot { height: 56px; padding: 10px; }
+
+/* 包里的灶台升级 */
+.card.upg { --c: var(--ember-d); --t: #F8E2CF; }
+.card.upg .cf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; }
+.card.upg .hds { letter-spacing: 2px; }
+.no-flex-gap .card.upg .cf > * + * { margin-top: 6px; }
+
+/* 打开包的窗口：同样固定大小 */
+#sheet.shopwin.pkwin { text-align: center; }
+#sheet.pkwin h1 { font-size: 32px; }
+#sheet.pkwin .shelf.pkopen { flex: 1 1 auto; min-height: 0; margin-top: 10px; align-content: center; align-items: center; overflow: hidden; }
+#sheet.pkwin .shelf.many { gap: 8px; }
+#sheet.pkwin .shelf.many .ware { width: 96px; }
+
+@media (max-width: 900px) {
+  #sheet.shopwin .shop { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; }
+}
+@media (max-width: 600px) {
+  #sheet.shopwin { width: 100%; height: 86vh; max-height: 660px; padding: 14px 12px 12px; }
+  #sheet.shopwin .shop-top { margin-bottom: 8px; } #sheet.shopwin .shop-top h1 { font-size: 26px; }
+  #sheet.shopwin .shop-top .wallet { font-size: 22px; } #sheet.shopwin .wallet .ic { width: 22px; height: 22px; }
+  #sheet.shopwin .pill.sm { height: 36px; font-size: 14px; padding: 0 10px; }
+  #sheet.shopwin .shop { grid-gap: 8px; gap: 8px; }
+  #sheet.shopwin .blk > header { padding: 7px 10px 0; } #sheet.shopwin .blk > header b { font-size: 15px; }
+  #sheet.shopwin .blk > header span { font-size: 11px; }
+  #sheet.shopwin .blk-in { padding: 8px 8px 10px; }
+  #sheet.shopwin #shelf { gap: 6px; justify-content: space-between; }
+  #sheet.shopwin #shelf .ware { width: calc((100% - 18px) / 4); }
+  #sheet.shopwin #shelf .card.recipe, #sheet.shopwin #shelf .card.helper { width: 100%; }
+  .blk > header .rr { height: 24px; font-size: 12px; padding: 0 8px 0 6px; margin-left: 6px; }
+  #packs { grid-gap: 8px; gap: 8px; }
+  .pkb { grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; grid-gap: 2px 8px; gap: 2px 8px; padding: 8px 8px 8px 8px; border-radius: 12px; }
+  .pk-ic { grid-row: 1 / 3; width: 38px; height: 38px; padding: 7px; border-radius: 10px; }
+  .pk-ic > i { width: 18px; height: 18px; right: -5px; bottom: -5px; padding: 2px; }
+  .pk-tx b { font-size: 15px; } .pk-tx small { font-size: 11px; }
+  .pkb .cost { grid-column: 2; font-size: 15px; } .pkb .cost .ic { width: 14px; height: 14px; }
+  #sheet.shopwin .hslot { height: 44px; padding: 8px; } #sheet.shopwin .hslot .ic { width: 26px; height: 26px; }
+  #sheet.shopwin .blk.hl .blk-in { padding: 6px 8px 8px; }
+  #sheet.shopwin .btns { margin-top: 8px; gap: 8px; }
+  #sheet.shopwin .btns .pill { height: 46px; font-size: 16px; padding: 0 14px; }
+  #sheet.shopwin .btns .bosschip { padding: 4px 6px; } #sheet.shopwin .btns .bosschip b { font-size: 12px; } #sheet.shopwin .btns .bosschip span { font-size: 11px; }
+  #sheet.shopwin .btns .bosschip .av { width: 24px; height: 24px; padding: 4px; }
+  #sheet.pkwin h1 { font-size: 24px; }
+  #sheet.pkwin .shelf.pkopen { padding: 10px 6px; gap: 6px; }
+  #sheet.pkwin .shelf .ware { width: 74px; }
+  #sheet.pkwin .shelf .card.recipe { width: 72px; }
+  #sheet.pkwin .shelf.many .ware { width: 66px; }
+}
+@media (max-width: 600px) { }
+/* 商店各区块填满固定窗口，内容在区块里居中 */
+#sheet.shopwin .shop { align-items: stretch; }
+#sheet.shopwin #shelf { align-items: center; justify-content: center; }
+#sheet.shopwin #shelf .ware { transform-origin: 50% 100%; }
+@media (max-width: 600px) and (min-height: 800px) {
+  #sheet.shopwin .shop { grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr) auto; }
+  .pkb { padding: 12px 10px; }
+}
+@media (max-width: 600px) { #sheet.shopwin #shelf { justify-content: space-between; } }
+/* 电脑端：精选区高度富余，商品卡放大一档 */
+@media (min-width: 901px) and (min-height: 700px) { #sheet.shopwin #shelf .ware-art { zoom: 1.3; } }
+.ware.pkw.got:disabled { opacity: 1; } .ware.pkw.got .card { animation: none; }
+
+/* ===== 整个页面锁定在一屏：不滚动、不能下拉、不回弹 ===== */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+#app { height: 100%; min-height: 0; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+#main { min-height: 0; }
+@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } }
+/* 弹窗高度按可见区域算（手机浏览器地址栏会让 vh 偏大） */
+#sheet { max-height: calc(100% - 32px); }
+#sheet.deckwin, #sheet.shopwin { height: 78vh; height: 78dvh; }
+@media (max-width: 600px) { #sheet.deckwin { height: 72vh; height: 72dvh; } #sheet.shopwin { height: 86vh; height: 86dvh; } }
+/* 窗口内部能滚的地方：滚到头也不带动整页 */
+#sheet, #dkList, #rules { overscroll-behavior: contain; }
+/* 电脑端矮屏（如 1366×650、1024×600）：牌和灶台缩一档，保证一屏放下 */
+@media (min-width: 901px) and (max-height: 760px) {
+  :root { --cw: 88px; --ch: 124px; }
+  #app { padding-top: calc(12px + var(--top-avoid, 0px)); padding-bottom: 10px; grid-gap: 14px; gap: 14px; }
+  #main { gap: 10px; } .no-flex-gap #main > * + * { margin-top: 10px; }
+  #rail { min-height: 0; } #rules { min-height: 0; padding-bottom: 8px; }
+  .rule { width: 60px; min-height: 104px; margin-top: 12px; padding: 8px 3px 6px; }
+  .rule .rc .ic { width: 17px; height: 17px; } .rule .rn { font-size: 18px; } .rule .rn.l { font-size: 15px; }
+  #stove { min-height: 0; padding: 12px 18px 24px; } #pot { margin-top: 30px; height: calc(var(--ch) + 26px); }
+  #hand { height: calc(var(--ch) + 56px); } #hand .card { bottom: 16px; }
+  #acts { grid-template-rows: 62px 44px; }
+  #ticket { padding: 20px 14px 16px; gap: 9px; }
+  #got { font-size: 38px; } #calc .box { height: 42px; font-size: 24px; }
+}
+@media (min-width: 901px) and (max-height: 600px) {
+  :root { --cw: 78px; --ch: 110px; }
+  .rule { min-height: 88px; width: 54px; } .rule .rn { font-size: 15px; }
+  #pot { margin-top: 26px; } #hand { height: calc(var(--ch) + 48px); }
+  #acts { grid-template-rows: 54px 40px; }
+}
+
+/* ===== 统一卡面：按牌宽等比缩放，任何地方都是同一个样子 ===== */
+.card:not(.recipe):not(.helper):not(.pack):not(.upg) { font-size: calc(var(--cw) * .16); }
+.cf { border-radius: calc(var(--cw) * .13); }
+.cf::before { content: ""; position: absolute; top: .3em; right: .3em; bottom: .3em; left: .3em; border-radius: calc(var(--cw) * .09); border: .12em solid var(--t); pointer-events: none; }
+.cf .idx { position: absolute; left: .32em; top: .36em; width: 1.6em; display: flex; flex-direction: column; align-items: center; gap: .16em; z-index: 2; }
+.cf .pt { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--c); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 1em; line-height: 1; box-shadow: inset 0 -.18em 0 rgba(0,0,0,.18); }
+.cf .pt .ic { width: .95em; height: .95em; stroke-width: 2.4; }
+.cf .mk { display: flex; align-items: center; justify-content: center; gap: .2em; height: .5em; color: var(--c); }
+.cf .mk i { width: .36em; height: .36em; border-radius: 50%; background: var(--c); }
+.cf .mk .lf { width: .75em; height: .75em; }
+.cf .vn { display: block; writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; white-space: nowrap; font-size: .9em; line-height: 1; letter-spacing: .04em; color: var(--ink); }
+.cf .vn.l { font-size: .8em; letter-spacing: 0; }
+.cf .plate { position: absolute; left: 59%; top: 54%; width: 3.5em; height: 3.5em; margin: -1.75em 0 0 -1.75em; border-radius: 50%; background: var(--t); }
+.cf .plate::after { content: ""; position: absolute; top: .3em; right: .3em; bottom: .3em; left: .3em; border-radius: 50%; border: .09em dashed rgba(255,255,255,.75); }
+.cf .art { position: absolute; top: .45em; right: .45em; bottom: .45em; left: .45em; color: var(--c); z-index: 1; }
+.cf .art .ic { stroke-width: 2.1; }
+.cf > .stp { position: absolute; left: .42em; bottom: .42em; top: auto; width: 1.25em; height: 1.25em; font-size: .78em; border-radius: .3em; z-index: 3; }
+.card.ban .ban-ic { position: absolute; right: .35em; bottom: .35em; width: 1.5em; height: 1.5em; color: var(--rec); z-index: 2; }
+.no-flex-gap .cf .idx > * + * { margin-top: .16em; }
+.no-flex-gap .cf .mk > * + * { margin-left: .2em; }
+
+/* 商店、包里的牌：尺寸只改牌宽，卡面跟着等比缩放 */
+.ware .card:not(.helper):not(.pack):not(.upg) { --cw: 96px; --ch: 134px; }
+.ware { width: auto; min-width: 0; }
+#sheet.pkwin .shelf.many .ware .card { --cw: 86px; --ch: 120px; }
+@media (max-width: 600px) {
+  .ware .card:not(.helper):not(.pack):not(.upg) { --cw: 72px; --ch: 101px; }
+  #sheet.pkwin .shelf.many .ware .card { --cw: 62px; --ch: 87px; }
+  #sheet.shopwin #shelf .ware { width: auto; flex: 1 1 0; }
+}
+@media (max-width: 400px) { .ware .card:not(.helper):not(.pack):not(.upg) { --cw: 66px; --ch: 92px; } }
+
+/* 菜谱：商店、包、结算页里也用灶台上方那种水牌，一眼就能认出是菜谱 */
+.ware .rule, .shelf .rule { animation: none; transform: none; margin-top: 16px; zoom: 1.25; pointer-events: none; }
+.ware .rule .x { display: none; }
+@media (max-width: 600px) { .ware .rule, .shelf .rule { zoom: 1.35; margin-top: 12px; } }
+@media (max-width: 400px) { .ware .rule, .shelf .rule { zoom: 1.25; } }
+
+/* 伙计：和小票上的伙计格子一样，深绿底、奶白图案 */
+.card.helper { --c: var(--cream); --t: rgba(252,248,239,.16); width: var(--cw); height: var(--ch); --cw: 96px; --ch: 134px; }
+.card.helper .cf { background: linear-gradient(#56704F, #3E5A3A); color: var(--cream); box-shadow: inset 0 -4px 0 #273C25, 0 6px 10px -6px rgba(0,0,0,.5); }
+.card.helper .hav { background: rgba(252,248,239,.16); color: var(--cream); border-radius: 12px; }
+.card.helper .hnm { color: var(--cream); }
+.card.helper .hds { color: #3E5A3A; background: var(--cream); }
+.hslot { background: linear-gradient(#56704F, #3E5A3A); color: var(--cream); box-shadow: inset 0 -3px 0 #273C25, 0 3px 0 rgba(0,0,0,.2); }
+#sheet.shopwin .blk.hl .hslot.empty { background: none; box-shadow: none; }
+@media (max-width: 600px) { .card.helper { --cw: 72px; --ch: 101px; } .card.helper .hav { width: 32px; height: 32px; padding: 6px; } }
+
+/* 灶台：去掉右上角槽位标识；提示字放在牌下方、火的上方，不和火重叠 */
+#warn { top: var(--ch); bottom: auto; height: calc(100% - var(--ch)); display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; }
+#warn .ic { width: 18px; height: 18px; vertical-align: 0; }
+@media (max-width: 900px) { #warn { bottom: auto; font-size: 15px; } #warn .ic { width: 15px; height: 15px; } }
+/* 商品：类型标签都在顶上一排，价格都在底下一排，中间的牌靠下对齐 */
+#sheet.shopwin #shelf { align-items: stretch; }
+#sheet.shopwin #shelf .ware, #sheet.pkwin .ware { justify-content: flex-end; }
+#sheet.shopwin #shelf .ware .kind { margin-bottom: auto; }
+.ware .sfx, .blk.green .ware .sfx { align-self: center; width: auto; border-radius: 9px; padding: 0 7px; white-space: nowrap; }
+#sheet.pkwin .shelf.pkopen { align-items: flex-end; }
+@media (min-width: 901px) and (max-height: 760px) { #pot { height: calc(var(--ch) + 28px); } #stove { padding-bottom: 30px; } #warn { font-size: 16px; } }
+
+/* ===== 商品：不要小字标签；下方是购买按钮；买完留空 ===== */
+.ware .buy { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 64px; height: 32px; padding: 0 12px; border-radius: 12px;
+  background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; font-size: 18px; box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 4px 0 var(--ember-d); transition: transform .1s, box-shadow .1s; }
+.ware .buy .ic { width: 17px; height: 17px; color: #6B3A10; }
+.ware:hover:not(:disabled) .buy { transform: translateY(-1px); }
+.ware:active:not(:disabled) .buy { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 1px 0 var(--ember-d); }
+.ware:disabled .buy, .ware .buy.no { background: rgba(43,36,32,.35); color: #FFB4A3; box-shadow: 0 3px 0 rgba(43,36,32,.35); }
+.ware:disabled .buy .ic { color: #FFB4A3; }
+.ware:disabled:not(.sold) { opacity: 1; }
+.ware:disabled .card, .ware:disabled .rule { filter: saturate(.6) brightness(.92); }
+.ware:hover:not(:disabled) { transform: translateY(-4px); }
+.ware .kind { display: none; }
+.ware.gone, .pkb.gone { visibility: hidden; pointer-events: none; }
+.pkb .buy { min-width: 0; height: 30px; padding: 0 10px; font-size: 16px; }
+.pkb:disabled { opacity: 1; } .pkb:disabled .pk-ic { filter: saturate(.5); }
+.pkb .buy { display: inline-flex; align-items: center; gap: 3px; border-radius: 10px; background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 3px 0 var(--ember-d); white-space: nowrap; }
+.pkb .buy .ic { width: 15px; height: 15px; color: #6B3A10; }
+.pkb:disabled .buy { background: rgba(43,36,32,.18); color: #B5432F; box-shadow: 0 2px 0 rgba(43,36,32,.2); } .pkb:disabled .buy .ic { color: #B5432F; }
+.no-flex-gap .ware .buy > * + *, .no-flex-gap .pkb .buy > * + * { margin-left: 3px; }
+#sheet.pkwin .legend { justify-content: center; margin-top: 6px; }
+@media (max-width: 600px) {
+  .ware .buy { min-width: 0; width: 100%; max-width: 72px; height: 28px; padding: 0 6px; font-size: 15px; border-radius: 10px; }
+  .ware .buy .ic { width: 14px; height: 14px; }
+  .pkb .buy { grid-column: 2; justify-self: start; height: 26px; font-size: 14px; padding: 0 8px; }
+}
+
+/* ===== 小票：出牌/弃牌次数、铜钱、伙计放在同一行；利息只在结账时显示 ===== */
+.t-bar { display: flex; flex-direction: column; gap: 12px; }
+.no-flex-gap .t-bar > * + * { margin-top: 12px; }
+#helpers .hchip { flex: none; }
+@media (max-width: 900px) {
+  .t-bar { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
+  .no-flex-gap .t-bar > * + * { margin-top: 0; margin-left: 10px; }
+  .t-bar .t-counts { flex: 1 1 auto; min-width: 0; }
+  .t-bar .t-coins { flex: none; }
+  .t-bar #helpers { flex: none; }
+}
+@media (max-width: 600px) {
+  .t-bar { gap: 8px; } .no-flex-gap .t-bar > * + * { margin-left: 8px; }
+  .t-bar .t-counts { grid-gap: 6px; gap: 6px; }
+  .t-bar .t-coins { gap: 4px; } #coins { font-size: 20px; } #coinIco { width: 18px; height: 18px; }
+  #helpers { gap: 4px; } .no-flex-gap #helpers > * + * { margin-left: 4px; }
+  #helpers .hchip { width: 28px; height: 28px; padding: 5px; border-radius: 8px; }
+}
+@media (max-width: 360px) { #helpers .hchip { width: 24px; height: 24px; padding: 4px; } .cnt span { font-size: 10px; } }
+
+/* ===== 出牌、弃牌按钮缩小 ===== */
+#board { grid-template-columns: 84px minmax(0, 1fr) 112px; }
+#acts { grid-template-rows: 56px 40px; grid-gap: 8px 6px; gap: 8px 6px; grid-template-columns: 1fr 38px; }
+.act.play { font-size: 18px; border-radius: 14px; } .act.play .ico { width: 22px; height: 22px; }
+.act.disc { font-size: 15px; border-radius: 12px; } .act.disc .ico, .act.sort .ico { width: 18px; height: 18px; }
+.act.sort { border-radius: 12px; }
+@media (min-width: 901px) and (max-height: 760px) { #acts { grid-template-rows: 50px 36px; } }
+@media (max-width: 900px) {
+  #acts { width: 200px; grid-template-columns: 1fr 1fr 40px; grid-template-rows: 46px; }
+  #board { grid-template-columns: 1fr auto; }
+}
+@media (max-width: 600px) {
+  #board { grid-template-columns: auto minmax(0, 1fr); }
+  #acts { width: auto; justify-self: end; grid-template-columns: 96px 96px 40px; grid-template-rows: 44px; grid-gap: 6px; gap: 6px; }
+  .act, .act.play, .act.disc { font-size: 15px; border-radius: 12px; gap: 4px; }
+  .act .ico, .act.disc .ico, .act.sort .ico { width: 17px; height: 17px; }
+}
+@media (max-width: 600px) and (min-height: 800px) { #acts { grid-template-rows: 48px; grid-template-columns: 104px 104px 44px; } }
+@media (max-width: 600px) and (max-height: 760px) { #acts { grid-template-rows: 40px; } }
+@media (max-width: 360px) { #acts { grid-template-columns: 82px 82px 36px; } }
+/* 电脑端：次数一行，铜钱和伙计同一行 */
+@media (min-width: 901px) {
+  .t-bar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
+  .no-flex-gap .t-bar > * + * { margin-top: 0; }
+  .t-bar .t-counts { flex: 1 1 100%; }
+  .t-bar .t-coins { flex: 1 1 auto; gap: 6px; } #coins { font-size: 28px; } #coinIco { width: 24px; height: 24px; }
+  .t-bar #helpers { flex: none; gap: 4px; } #helpers .hchip { width: 30px; height: 30px; padding: 5px; border-radius: 8px; }
+}
+
+/* ===== 商品：点牌看效果，点下方按钮才买 ===== */
+.ware { cursor: default; }
+.ware-art { display: block; cursor: pointer; }
+.ware:hover { transform: none; }
+.ware-art:hover .card, .ware-art:hover .rule { transform: translateY(-3px); }
+.ware .card, .ware .rule { transition: transform .15s, filter .2s; }
+.ware.off .card, .ware.off .rule { filter: saturate(.6) brightness(.92); }
+.ware .buy { cursor: pointer; font: inherit; }
+.ware .buy:hover:not(:disabled) { transform: translateY(-1px); }
+.ware .buy:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 1px 0 var(--ember-d); }
+.ware .buy:disabled { background: rgba(43,36,32,.35); color: #FFB4A3; box-shadow: 0 3px 0 rgba(43,36,32,.35); cursor: default; }
+.ware .buy:disabled .ic { color: #FFB4A3; }
+.ware .buy.take { font-size: 15px; }
+.pkb { cursor: pointer; }
+.pkb.off .pk-ic { filter: saturate(.5); }
+.pkb .buy { cursor: pointer; font: inherit; }
+.pkb .buy:disabled { background: rgba(43,36,32,.18); color: #B5432F; box-shadow: 0 2px 0 rgba(43,36,32,.2); cursor: default; } .pkb .buy:disabled .ic { color: #B5432F; }
+.pkb:hover { transform: none; box-shadow: 0 4px 0 rgba(0,0,0,.16); }
+.pkb .buy:active:not(:disabled) { transform: translateY(2px); }
+#sheet.pkwin .ware { gap: 8px; }
+#sheet.shopwin #shelf .ware-art .card.helper { width: var(--cw); }
+#sheet.shopwin #shelf .ware { height: 100%; } #sheet.shopwin #shelf .ware .buy { margin-top: auto; } #sheet.shopwin #shelf .ware .ware-art { margin-top: auto; }
+@media (min-width: 901px) and (min-height: 700px) { #sheet.shopwin #shelf .ware-art .rule { zoom: 1; margin-top: 12px; } }
+
+/* ===== 符号说明 ===== */
+.fxp.g { background: var(--gold-d); }
+.help .sym h4 { margin: 10px 0 4px; font-size: 14px; font-weight: 400; color: var(--mute); }
+.help .sym .tags { grid-template-columns: 96px 1fr; }
+.help .sym .tags > span:nth-child(2n) { line-height: 1.45; }
+.help .sym .tags .fxp { margin: 0 1px; }
+.help .sym .sy { justify-self: start; font-size: 15px; color: var(--ink); background: var(--paper-d); border-radius: 6px; padding: 0 6px; }
+.help .pt-demo { justify-self: start; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--cream); background: var(--ing); font-size: 14px; }
+.help .dot-demo { justify-self: start; display: inline-flex; gap: 3px; } .help .dot-demo i { width: 7px; height: 7px; border-radius: 50%; background: var(--tech); }
+.help .ic-demo { justify-self: start; width: 20px; height: 20px; color: var(--ing); }
+.help .ban-demo { justify-self: start; width: 22px; height: 22px; color: var(--rec); }
+.help .sym .stp { justify-self: start; }
+.card.helper .hds { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; background: none; padding: 0; }
+.card.helper .hds .fxp { font-size: 13px; height: 22px; }
+@media (max-width: 600px) { .help .sym .tags { grid-template-columns: 78px 1fr; grid-gap: 6px 8px; gap: 6px 8px; font-size: 13px; } .card.helper .hds .fxp { font-size: 11px; height: 18px; padding: 0 5px; } }
+#fxtip .fxp { height: 20px; font-size: 13px; vertical-align: 1px; margin: 0 1px; }
+.no-flex-gap .card.helper .hds > * + * { margin-left: 3px; }
+
+/* ===== 开包窗口：按内容收紧，不再撑满固定大小 ===== */
+#sheet.pkwin { width: auto; max-width: min(92vw, 760px); height: auto; padding: 16px 18px 14px; overflow: hidden; }
+#sheet.pkwin h1 { font-size: 26px; }
+#sheet.pkwin .sub { font-size: 14px; margin-top: 2px; }
+#sheet.pkwin .shelf.pkopen { min-height: 0; margin-top: 10px; padding: 14px 14px 12px; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: flex-end; overflow: visible; }
+#sheet.pkwin .btns { margin-top: 10px; }
+#sheet.pkwin .btns .pill { height: 38px; font-size: 15px; }
+@media (max-width: 600px) {
+  #sheet.pkwin { width: auto; max-width: calc(100vw - 24px); padding: 12px 10px 10px; }
+  #sheet.pkwin h1 { font-size: 22px; }
+  #sheet.pkwin .shelf.pkopen { padding: 10px 8px; gap: 6px; }
+}
+
+/* ===== 商店菜谱：宽度固定，不随菜名长短变 ===== */
+#sheet.shopwin #shelf .ware-art .rule { width: 70px; flex: none; }
+@media (max-width: 900px) { #sheet.shopwin #shelf .ware-art .rule { width: 50px; } }
+
+/* ===== 去掉排序按钮：只剩出牌、弃牌 ===== */
+#acts { grid-template-columns: 1fr; }
+#acts .disc { grid-column: 1; }
+@media (max-width: 900px) { #acts { width: 200px; grid-template-columns: 1fr 1fr; } .act.play { grid-column: 1; } #acts .disc { grid-row: 1; grid-column: 2; } }
+@media (max-width: 600px) { #acts { width: auto; grid-template-columns: 112px 112px; } }
+@media (max-width: 600px) and (min-height: 800px) { #acts { grid-template-columns: 120px 120px; } }
+@media (max-width: 360px) { #acts { grid-template-columns: 96px 96px; } }
+
+/* ===== 小票：伙计固定留 3 格，出牌/弃牌次数格宽度固定 ===== */
+#helpers:empty { display: flex; }
+.hchip.empty { background: none; box-shadow: none; border: 1.5px dashed var(--paper-d); }
+@media (max-width: 900px) {
+  .t-bar .t-counts { flex: none; grid-template-columns: 78px 78px; }
+  .t-bar .t-coins { flex: 1 1 auto; min-width: 0; justify-content: center; }
+}
+@media (max-width: 600px) { .t-bar .t-counts { grid-template-columns: 68px 68px; } }
+@media (max-width: 360px) { .t-bar .t-counts { grid-template-columns: 56px 56px; } }

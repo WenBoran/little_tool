@@ -1,0 +1,1129 @@
+@font-face { font-family: 'KuaiLe'; src: url(./fonts/kuaile.woff2) format('woff2'); font-display: block; }
+@font-face { font-family: 'Fred'; src: url(./fonts/fredoka.woff2) format('woff2'); font-display: block; }
+:root {
+  color-scheme: light;
+  --wood: #B07D52; --wood-d: #865833; --wood-l: #CFA172; --iron: #2F2A27; --iron-l: #48413B;
+  --paper: #F8F1E3; --paper-d: #E9DCC4; --ink: #2B2420; --mute: #8C7F6F; --cream: #FCF8EF;
+  --ember: #EE8A48; --ember-d: #B65D27;
+  --ing: #5E8250; --ing-t: #E1EAD3; --tech: #C8693A; --tech-t: #F6DECA;
+  --equip: #4E7090; --equip-t: #D8E3EC; --spice: #8C5A8A; --spice-t: #EEDCEB; --rec: #B5432F; --rec-t: #F5DBD2;
+  --chip: #3B7C93; --mult: #CB4630; --gold: #E5B95A; --gold-d: #A7802C;
+  --font: "Fred", "KuaiLe", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --cw: 104px; --ch: 146px}
+* { box-sizing: border-box}
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%}
+html, body { margin: 0; min-height: 100%; overflow-x: hidden; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; color: var(--ink); font: 400 15px/1.35 var(--font); font-synthesis: none; -webkit-font-smoothing: antialiased}
+body { background:
+    radial-gradient(ellipse 120% 80% at 50% 40%, transparent 55%, rgba(60,35,15,.38)),
+    repeating-linear-gradient(91deg, rgba(255,240,215,.05) 0 2px, transparent 2px 11px, rgba(70,40,15,.05) 11px 12px, transparent 12px 29px),
+    repeating-linear-gradient(89deg, rgba(70,40,15,.07) 0 1px, transparent 1px 83px),
+    linear-gradient(170deg, var(--wood-l), var(--wood) 45%, var(--wood-d)); background-attachment: fixed}
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0}
+:focus { outline: 3px solid var(--cream); outline-offset: 3px}
+:focus:not(:focus-visible) { outline: none}
+.ic { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block}
+b { font-weight: 400}
+
+#app { max-width: 1240px; min-height: 100vh; margin: 0 auto; padding: 16px 20px 14px; padding-top: calc(16px + var(--top-avoid, 0px)); display: grid; grid-gap: 18px; gap: 18px; grid-template-columns: 214px minmax(0, 1fr)}
+
+/* 左侧点菜小票 */
+#ticket { position: relative; align-self: start; position: sticky; top: 16px; background: var(--cream); border-radius: 6px 6px 0 0; padding: 26px 16px 22px; transform: rotate(-.6deg); box-shadow: 0 2px 0 rgba(43,36,32,.08), 0 18px 30px -18px rgba(40,20,5,.75); display: flex; flex-direction: column; gap: 12px}
+#ticket::after { content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 10px;
+  background: linear-gradient(-45deg, transparent 6px, var(--cream) 6px) 0 0 / 12px 10px repeat-x, linear-gradient(45deg, transparent 6px, var(--cream) 6px) 0 0 / 12px 10px repeat-x}
+#ticket .clip { position: absolute; left: 50%; top: -9px; width: 64px; height: 22px; margin-left: -32px; border-radius: 6px;
+  background: linear-gradient(#9AA3A8, #6C757B); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 3px 4px rgba(0,0,0,.3)}
+.t-row { display: flex; align-items: center; justify-content: space-between; gap: 8px}
+.lb { font-size: 13px; color: var(--mute)}
+#lvname { font-size: 24px}
+#pips { display: flex; gap: 5px}
+#pips i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--paper-d); display: grid; place-items: center; color: var(--cream)}
+#pips i.done { background: var(--ing); border-color: var(--ing)}
+#pips i .ic { width: 10px; height: 10px; stroke-width: 4}
+#pips i.now { border-color: var(--ember); background: rgba(238,138,72,.2); animation: pulse 1.6s infinite}
+#pips i.boss { border-color: var(--rec); color: var(--rec); width: 20px; height: 20px; margin-top: -2px}
+#pips i.boss .ic { width: 12px; height: 12px; stroke-width: 2.4}
+#pips i.boss.now { background: var(--rec); color: var(--cream)}
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(238,138,72,.18)} }
+.dash { border: 0; border-top: 2px dashed var(--paper-d); margin: 0}
+.t-goal b { font-size: 30px; line-height: 1}
+.t-score { display: block}
+.t-score .t-row { align-items: baseline}
+#got { font-size: 46px; line-height: 1; font-variant-numeric: tabular-nums; display: inline-block; transform-origin: 100% 70%}
+#bar { height: 10px; border-radius: 5px; background: var(--paper-d); position: relative; overflow: hidden; margin-top: 6px}
+#bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px}
+#bar .got { left: 0; background: linear-gradient(90deg, var(--ember), #F2A660); transition: width .5s cubic-bezier(.3, 1.3, .5, 1)}
+#bar .pre { background: repeating-linear-gradient(45deg, rgba(238,138,72,.45) 0 4px, rgba(238,138,72,.25) 4px 8px); transition: left .5s, width .2s}
+#bar.full .got { background: linear-gradient(90deg, var(--ing), #8DB07A)}
+
+/* 分 × 倍 */
+#calc { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px}
+#calc .box { height: 50px; border-radius: 10px; display: grid; place-items: center; color: var(--cream); font-size: 28px; font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.18); transition: filter .2s; overflow: hidden}
+#calc .chip { background: var(--chip)} #calc .mult { background: var(--mult)}
+#calc .box.dim { filter: saturate(.25) brightness(1.15)}
+#calc .x { font-size: 22px; color: var(--mute)}
+#calcTot { text-align: center; height: 22px; font-size: 18px; color: var(--mute); margin-top: -4px}
+#calcTot b { color: var(--ink); font-size: 22px}
+.t-counts { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 8px; gap: 8px}
+.cnt { border-radius: 10px; background: var(--paper); padding: 6px 0 4px; text-align: center; border: 2px solid var(--paper-d)}
+.cnt b { display: block; font-size: 26px; line-height: 1}
+.cnt span { font-size: 12px; color: var(--mute)}
+.cnt.play b { color: var(--ember-d)} .cnt.disc b { color: var(--equip)}
+.t-coins { display: flex; align-items: center; gap: 8px}
+#coinIco { width: 30px; height: 30px; color: var(--gold-d)}
+#coins { font-size: 34px; line-height: 1; color: var(--gold-d); font-variant-numeric: tabular-nums; display: inline-block}
+.qm { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--paper-d); color: var(--mute); font-size: 16px; margin-left: auto}
+#bossTag:empty { display: none}
+.bosschip { display: flex; align-items: center; gap: 8px; background: var(--rec-t); border-radius: 10px; padding: 7px 9px; color: var(--rec)}
+.bosschip .av { width: 34px; height: 34px; border-radius: 50%; background: var(--rec); color: var(--cream); padding: 6px; flex: none}
+.bosschip b { display: block; font-size: 15px; color: var(--ink)}
+.bosschip span { font-size: 13px}
+
+/* 安全区：先保留普通 padding，支持 env() 的内核再叠加 */
+@supports (padding-top: env(safe-area-inset-top)) {
+  #app { padding-top: calc(16px + var(--top-avoid, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))));
+    padding-bottom: calc(14px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))}
+}
+
+#main { display: flex; flex-direction: column; gap: 14px; min-width: 0}
+
+/* 菜谱水牌：挂在铜杆上 */
+#rail { position: relative; padding-top: 6px; min-height: 150px}
+#rail::before { content: ""; position: absolute; left: -6px; right: -6px; top: 4px; height: 7px; border-radius: 4px;
+  background: linear-gradient(#E3C27E, #A97E32 60%, #7C5A20); box-shadow: 0 3px 4px rgba(40,20,5,.35)}
+#rules { position: relative; display: flex; gap: 12px; overflow-x: auto; overflow-y: visible; padding: 0 6px 12px; min-height: 144px; scrollbar-width: none}
+#rules::-webkit-scrollbar { display: none}
+#rules:empty::after { content: "还没有菜谱"; color: rgba(252,248,239,.6); padding: 40px 10px}
+.rule { flex: none; width: 70px; min-height: 128px; margin-top: 14px; border-radius: 6px 6px 12px 12px; position: relative;
+  background: linear-gradient(180deg, #F9EED8, #EBD8B4); color: var(--ink);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.55), inset 0 -5px 0 rgba(120,80,30,.12), 0 6px 0 -2px rgba(80,50,20,.35), 0 12px 16px -12px rgba(0,0,0,.6);
+  display: flex; flex-direction: column; align-items: center; padding: 10px 4px 8px; transform-origin: 50% -14px; animation: hang 6s ease-in-out infinite}
+.rule:nth-child(2n) { animation-delay: -2s} .rule:nth-child(3n) { animation-delay: -4s; animation-duration: 7s}
+@keyframes hang { 0%, 100% { transform: rotate(-.8deg)} 50% { transform: rotate(.8deg)} }
+.rule::before { content: ""; position: absolute; top: -14px; left: 50%; width: 2px; height: 16px; margin-left: -1px; background: #B5432F}
+.rule::after { content: ""; position: absolute; top: 4px; left: 50%; margin-left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #B5432F; box-shadow: inset 0 -2px 0 rgba(0,0,0,.25)}
+.rule .rc { display: flex; gap: 1px; margin-top: 6px}
+.rule .rc .ic { width: 21px; height: 21px}
+.rule .rc .i { color: var(--ing)} .rule .rc .t { color: var(--tech)}
+.rule .rn { writing-mode: vertical-rl; white-space: nowrap; font-size: 21px; letter-spacing: .06em; flex: 1; display: flex; align-items: center; margin: 4px 0}
+.rule .rn.l { font-size: 17px; letter-spacing: 0}
+.rule .eq { font-size: 13px; color: var(--cream); background: var(--rec); border-radius: 8px; padding: 1px 6px; white-space: nowrap}
+.rule .lv { position: absolute; left: -6px; top: 10px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold); color: var(--ink); font-size: 12px; line-height: 18px; box-shadow: 0 2px 0 var(--gold-d)}
+.rule .x { position: absolute; right: -8px; top: 8px; min-width: 24px; height: 24px; border-radius: 12px; background: var(--rec); color: var(--cream); font-size: 13px; line-height: 24px; text-align: center; padding: 0 5px; display: none; box-shadow: 0 2px 0 rgba(0,0,0,.25)}
+.rule.on { background: linear-gradient(180deg, #FFF3E8, #F6D3C2); animation: none; transform: translate(0, 6px) rotate(-4deg); transition: transform .25s}
+.rule.on .x { display: block; animation: popin .3s}
+.rule.off { opacity: .45; filter: grayscale(.8)}
+.rule.used::before { background: var(--mute)}
+.rule.flash { animation: ring .7s}
+@keyframes ring { 0% { transform: none} 15% { transform: rotate(12deg) scale(1.12)} 35% { transform: rotate(-9deg)} 55% { transform: rotate(5deg)} 75% { transform: rotate(-2deg)} 100% { transform: scale(1)} }
+@keyframes popin { from { transform: scale(0)} 70% { transform: scale(1.25)} }
+
+/* 铸铁灶台 */
+#stove { position: relative; border-radius: 22px; padding: 16px 22px 30px; min-height: 260px; color: var(--cream); isolation: isolate;
+  background: radial-gradient(ellipse 70% 60% at 50% 115%, rgba(238,138,72,.33), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 5px), linear-gradient(var(--iron-l), var(--iron) 70%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.1), inset 0 -6px 0 rgba(0,0,0,.4), 0 0 0 5px rgba(40,22,8,.25), 0 16px 26px -14px rgba(20,8,0,.8)}
+#stove::before { content: ""; position: absolute; top: 9px; right: 9px; bottom: 9px; left: 9px; border-radius: 15px; border: 1.5px solid rgba(255,255,255,.06); pointer-events: none}
+#stove.shake { animation: shake .45s}
+@keyframes shake { 20% { transform: translate(-6px, 2px)} 40% { transform: translate(5px, -3px)} 60% { transform: translate(-3px, 2px)} 80% { transform: translate(2px, -1px)} }
+#equips, #spices { position: absolute; top: 16px; display: flex; gap: 6px; z-index: 3}
+#equips { left: 22px} #spices { left: 50%; transform: translate(-50%, 0)}
+.chipx { display: flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px 0 5px; border-radius: 14px; font-size: 14px; animation: popin .3s}
+.chipx .ic { width: 22px; height: 22px}
+.chipx.e { background: rgba(216,227,236,.14); color: #BCD0E0}
+.chipx.s { background: rgba(238,220,235,.16); color: #E8C9E5}
+.chipx.new { outline: 1.5px dashed currentColor}
+.chipx.hit { animation: hit .45s; background: var(--spice); color: var(--cream)}
+@keyframes hit { 40% { transform: scale(1.3)} }
+#pot { position: relative; height: calc(var(--ch) + 34px); margin-top: 40px; z-index: 2}
+#slots { position: absolute; top: 0; right: 0; left: 0; height: var(--ch)}
+#slots .card { position: absolute; top: 0; transition: left .3s cubic-bezier(.3, 1.3, .5, 1), opacity .2s}
+#slots .card.ghost { opacity: .88}
+#slots .card.ghost .cf { box-shadow: 0 0 0 2px rgba(252,248,239,.35)}
+#slots .hole { position: absolute; top: 0; width: var(--cw); height: var(--ch); border-radius: 14px; transition: left .3s;
+  background: radial-gradient(circle at 50% 50%, rgba(0,0,0,.22), rgba(0,0,0,.1) 70%); box-shadow: inset 0 3px 6px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.06)}
+#slots .card.spare { opacity: .55}
+#slots .card.lit .cf { box-shadow: 0 0 0 3px var(--rec), 0 0 18px rgba(181,67,47,.6)}
+#slots .card.score .cf { animation: jolt .32s}
+@keyframes jolt { 35% { transform: translateY(-14px) rotate(-3deg) scale(1.08)} }
+#links { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible}
+#links path { fill: none; stroke: var(--ember); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw .4s forwards}
+#links path.bad { stroke: rgba(252,248,239,.35); stroke-dasharray: 3 7; stroke-dashoffset: 0; animation: none}
+#links path.hit { stroke: #F37B63}
+@keyframes draw { to { stroke-dashoffset: 0} }
+#flame { position: absolute; left: 50%; bottom: 8px; transform: translate(-50%, 0); display: flex; gap: 14px; height: 20px; align-items: flex-end; z-index: 1}
+#flame i { width: 14px; height: 9px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%; background: radial-gradient(circle at 50% 80%, #FFE1A8, #F38B3E 55%, rgba(220,80,30,0) 75%);
+  opacity: .35; transform-origin: 50% 100%; transition: height .3s, opacity .3s}
+#stove.hot #flame i { height: 18px; opacity: .95; animation: flick .5s infinite alternate ease-in-out}
+#stove.roar #flame i { height: 30px}
+#flame i:nth-child(2n) { animation-delay: -.2s} #flame i:nth-child(3n) { animation-delay: -.35s; animation-duration: .4s}
+@keyframes flick { from { transform: scale(.85, 1)} to { transform: scale(1.1, 1.2)} }
+#warn { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 22px; color: #FFB4A6; z-index: 4; pointer-events: none; text-shadow: 0 2px 0 rgba(0,0,0,.4)}
+#warn:not(:empty) { animation: popin .25s}
+#warn .ic { display: inline-block; width: 22px; height: 22px; vertical-align: -4px; margin-right: 4px}
+@media (max-width: 900px) { #warn { bottom: 4px; font-size: 18px} }
+
+/* 卡牌：外层 .card 负责位置，内层 .cf 负责动效 */
+.card { width: var(--cw); height: var(--ch); position: relative; flex: none; user-select: none; touch-action: manipulation; cursor: pointer;
+  --c: var(--ink); --t: var(--paper-d)}
+.card.ing { --c: var(--ing); --t: var(--ing-t)} .card.tech { --c: var(--tech); --t: var(--tech-t)}
+.card.equip { --c: var(--equip); --t: var(--equip-t)} .card.spice { --c: var(--spice); --t: var(--spice-t)}
+.cf { position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: 14px; overflow: hidden; color: var(--ink);
+  background: radial-gradient(circle at 30% 0%, #FFFDF8, var(--paper) 60%), var(--paper);
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.8), 0 1px 0 rgba(255,255,255,.4), 0 4px 0 -1px #D6C6A8, 0 5px 0 -1px rgba(60,35,15,.35), 0 12px 16px -10px rgba(30,15,0,.65); transition: transform .22s cubic-bezier(.3, 1.4, .5, 1), box-shadow .2s}
+.card.equip .cf { background: linear-gradient(160deg, #FDFBF6, #EEF2F4)}
+.card.spice .cf { background: linear-gradient(160deg, #FDFAF8, #F4ECF2)}
+.card.ban .cf::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: repeating-linear-gradient(-45deg, rgba(181,67,47,.16) 0 6px, transparent 6px 12px)}
+
+/* 桌面下半区 */
+#board { display: grid; grid-template-columns: 84px minmax(0, 1fr) 128px; gap: 14px; align-items: end; margin-top: auto}
+#piles { display: flex; flex-direction: column; gap: 16px; align-items: center; padding-bottom: 4px}
+.pile { position: relative; width: 62px; height: 86px}
+.pile i { position: absolute; top: 0; right: 0; bottom: 0; left: 0; border-radius: 9px; background: #7A2F22; border: 2px solid #F2E6CF;
+  background-image: radial-gradient(circle at 50% 50%, rgba(242,230,207,.0) 0 13px, rgba(242,230,207,.6) 13px 15px, transparent 15px), repeating-linear-gradient(45deg, rgba(242,230,207,.12) 0 3px, transparent 3px 7px); box-shadow: 0 3px 4px rgba(0,0,0,.3)}
+.pile i:nth-child(2) { transform: translate(3px, -3px)} .pile i:nth-child(3) { transform: translate(6px, -6px)}
+.pile b { position: absolute; left: calc(50% + 6px); top: calc(50% - 6px); transform: translate(-50%, -50%); line-height: 1; font-size: 24px; color: #F8E9C8; z-index: 1; text-shadow: 0 2px 0 rgba(0,0,0,.4)}
+.pile.dis { width: 48px; height: 66px}
+.pile.dis i { background: rgba(60,35,15,.2); border: 2px dashed rgba(252,248,239,.45); box-shadow: none}
+.pile.dis b { color: rgba(252,248,239,.85); font-size: 18px; transform: translate(-50%, -50%)}
+.pile.empty i:nth-child(n+2) { display: none}
+.pile.empty b { left: 50%; top: 50%}
+.pile.dis b { left: 50%; top: 50%}
+.pile.bump { animation: hit .35s}
+.pile.shuffle i { animation: riffle .6s}
+.pile.shuffle i:nth-child(2) { animation-delay: .08s} .pile.shuffle i:nth-child(3) { animation-delay: .16s}
+@keyframes riffle { 40% { transform: translate(30px, -16px) rotate(14deg)} }
+
+#hand { position: relative; height: calc(var(--ch) + 76px); min-width: 0; touch-action: none; -webkit-touch-callout: none}
+#hand .card { position: absolute; bottom: 24px; transform-origin: 50% 130%; transition: left .3s cubic-bezier(.25, 1, .5, 1), transform .3s cubic-bezier(.25, 1, .5, 1)}
+#hand .card:focus { outline: none}
+#hand .card.peek .cf { transform: translateY(-18px)}   /* .cf 在牌自己的倾斜坐标里移动，所以是沿牌的角度弹出 */
+#hand .card:focus .cf { outline: 3px solid var(--cream); outline-offset: 2px; }
+#hand .card:focus:not(:focus-visible) .cf { outline: none; }
+#hand .card.sel .cf { box-shadow: 0 0 0 3px var(--cream), 0 0 0 6px var(--ember), 0 22px 22px -14px rgba(30,15,0,.7); transform: translateY(-34px)}
+#hand .card.sel.peek .cf { transform: translateY(-40px)}
+#hand .card.enter { animation: deal .5s cubic-bezier(.25,1.2,.5,1) backwards}
+@keyframes deal { from { transform: translate(calc(-1 * var(--fromX, 400px)), 20px) rotate(-25deg); opacity: 0; } 30% { opacity: 1; } }
+#hand .card.nope .cf { animation: nope .35s}
+@keyframes nope { 25% { transform: translate(-6px, 0)} 50% { transform: translate(6px, 0)} 75% { transform: translate(-3px, 0)} }
+
+#acts { display: grid; grid-template-columns: 1fr 44px; grid-template-rows: 72px 50px; grid-gap: 10px 8px; gap: 10px 8px; padding-bottom: 8px}
+.act { position: relative; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 19px; transition: transform .1s, box-shadow .1s, filter .2s}
+.act .ico { width: 28px; height: 28px}
+.act .ico .ic { stroke-width: 2.4}
+.act.play { grid-column: 1 / -1; background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 6px 0 var(--ember-d), 0 10px 14px -6px rgba(0,0,0,.5); font-size: 22px}
+.act.disc { background: linear-gradient(#6A8DAC, var(--equip)); color: var(--cream); box-shadow: inset 0 2px 0 rgba(255,255,255,.25), 0 5px 0 #33495D, 0 10px 14px -6px rgba(0,0,0,.5); flex-direction: row; gap: 6px; font-size: 17px}
+.act.disc .ico { width: 22px; height: 22px}
+.act.sort { grid-row: 2; grid-column: 2; background: rgba(43,36,32,.32); color: var(--cream); box-shadow: 0 4px 0 rgba(43,36,32,.4)}
+.act.sort .ico { width: 22px; height: 22px}
+#acts .disc { grid-row: 2; grid-column: 1}
+.act:hover:not(:disabled) { transform: translateY(-2px)}
+.act:active:not(:disabled) { box-shadow: 0 1px 0 rgba(0,0,0,.4); transform: translateY(5px)}
+.act:disabled { filter: grayscale(.9) brightness(.8); opacity: .55; cursor: default}
+.act.play.ready { animation: breathe 1.8s infinite}
+@keyframes breathe { 50% { box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 6px 0 var(--ember-d), 0 0 0 6px rgba(238,138,72,.25), 0 10px 14px -6px rgba(0,0,0,.5)} }
+
+#toast { position: fixed; left: 0; right: 0; margin: 0 auto; width: -webkit-fit-content; width: fit-content; top: 40%; background: var(--iron); color: var(--cream); padding: 9px 18px; border-radius: 18px; font-size: 16px; z-index: 90; animation: popin .25s; pointer-events: none; box-shadow: 0 10px 20px -8px rgba(0,0,0,.6)}
+
+/* 特殊效果浮框 */
+#fxtip { position: fixed; z-index: 95; max-width: 220px; padding: 7px 12px; border-radius: 10px; background: var(--iron); color: var(--cream);
+  font-size: 15px; line-height: 1.45; white-space: pre-line; text-align: center; pointer-events: none; box-shadow: 0 10px 20px -8px rgba(0,0,0,.6); opacity: 0; transition: opacity .06s}
+#fxtip.on { opacity: 1}
+#fxtip[hidden] { display: none}
+
+/* 飞字、金币、火星 */
+#fx { position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; z-index: 85}
+.pop { position: absolute; transform: translate(-50%, -50%); font-size: 30px; color: var(--cream); white-space: nowrap; text-shadow: 0 3px 0 rgba(0,0,0,.45), 0 0 12px rgba(0,0,0,.25);
+  animation: rise 1s cubic-bezier(.2,1.4,.4,1) forwards}
+.pop.c { color: #9FE0F5} .pop.m { color: #FFB09F} .pop.g { color: var(--gold)} .pop.big { font-size: 64px}
+@keyframes rise { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4)} 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.25)} 40% { transform: translate(-50%, -50%) scale(1)} 75% { opacity: 1; transform: translate(-50%, -75%)} 100% { opacity: 0; transform: translate(-50%, -140%)} }
+.fly { position: absolute; width: 26px; height: 26px; margin: -13px; border-radius: 50%; color: var(--gold-d);
+  background: radial-gradient(circle at 35% 30%, #FFF0B8, var(--gold) 55%, var(--gold-d)); box-shadow: 0 2px 0 #7E5E1F}
+.fly::after { content: ""; position: absolute; top: 8px; right: 8px; bottom: 8px; left: 8px; border: 2px solid #7E5E1F; border-radius: 2px; opacity: .6}
+.fly.chipf { background: radial-gradient(circle at 35% 30%, #BDEBFA, var(--chip)); box-shadow: 0 2px 0 #1F4E5E; width: 18px; height: 18px; margin: -9px}
+.fly.chipf::after { display: none}
+.spark { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #FFD08A; box-shadow: 0 0 6px #FF9A4A}
+.bump { animation: bumpy .4s}
+@keyframes bumpy { 40% { transform: scale(1.3)} }
+#got.bump { animation: gotbump .45s; color: var(--ember-d)}
+@keyframes gotbump { 40% { transform: rotate(-4deg) scale(1.35)} }
+.banner { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 75; pointer-events: none; text-align: center; color: var(--cream);
+  animation: banner 1.5s cubic-bezier(.2,1.3,.4,1) forwards}
+.banner b { display: block; font-size: 84px; line-height: 1; text-shadow: 0 5px 0 var(--ember-d), 0 10px 24px rgba(0,0,0,.5)}
+.banner span { font-size: 22px; text-shadow: 0 2px 0 rgba(0,0,0,.5)}
+.banner.bad b { text-shadow: 0 5px 0 #6E2418, 0 10px 24px rgba(0,0,0,.5)}
+@keyframes banner { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-8deg) scale(.3)} 25% { opacity: 1; transform: translate(-50%, -50%) rotate(2deg) scale(1.08)} 35% { transform: translate(-50%, -50%)} 80% { opacity: 1; transform: translate(-50%, -50%)} 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1)} }
+
+/* 弹层 */
+#veil { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(36,22,12,.66); display: grid; place-items: center; z-index: 80; animation: fade .25s}
+#veil[hidden] { display: none}
+@keyframes fade { from { opacity: 0} }
+#sheet { position: relative; background: var(--cream); border-radius: 22px; padding: 26px 28px 24px; width: 96vw; max-width: 940px; max-height: 94vh; overflow: auto; text-align: center;
+  box-shadow: 0 0 0 6px rgba(252,248,239,.18), 0 30px 60px -24px rgba(0,0,0,.8); animation: sheetIn .4s cubic-bezier(.2,1.3,.4,1)}
+@keyframes sheetIn { from { opacity: 0; transform: translate(0, 40px) scale(.92)} }
+#sheet h1 { font-size: 40px; line-height: 1.15; margin: 0; font-weight: 400}
+#sheet h2 { font-size: 20px; margin: 18px 0 8px; font-weight: 400; color: var(--mute); display: flex; align-items: center; justify-content: center; gap: 8px}
+#sheet h2 .ic { width: 22px; height: 22px}
+#sheet .sub { color: var(--mute); font-size: 17px; margin-top: 4px}
+.btns { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 18px}
+.pill { height: 52px; padding: 0 26px; border-radius: 16px; background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; font-size: 21px; display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 5px 0 var(--ember-d); transition: transform .1s, box-shadow .1s}
+.pill .ic { width: 22px; height: 22px; stroke-width: 2.4}
+.pill.o { background: var(--paper-d); color: var(--ink); box-shadow: 0 4px 0 #C4B391; padding: 0 16px; font-size: 17px; height: 46px}
+.pill .cost { display: inline-flex; align-items: center; gap: 2px; color: var(--gold-d)}
+.pill .cost .ic { width: 18px; height: 18px}
+.pill:hover:not(:disabled) { transform: translateY(-2px)}
+.pill:active:not(:disabled) { box-shadow: 0 1px 0 rgba(0,0,0,.3); transform: translateY(4px)}
+.pill:disabled { opacity: .45; cursor: default}
+
+/* 账单 */
+.bill { max-width: 360px; margin: 16px auto 0; text-align: left; font-size: 18px}
+.bill .ln { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 2px dotted var(--paper-d); opacity: 0; animation: lnIn .35s forwards}
+.bill .ln .ic { width: 22px; height: 22px; color: var(--mute); flex: none}
+.bill .ln span { flex: 1}
+.bill .ln small { display: block; font-size: 13px; color: var(--mute); line-height: 1.3}
+.bill { max-width: 420px}
+.bill .ln b { color: var(--gold-d); font-size: 22px}
+.bill .ln.tot { border-bottom: 0; font-size: 22px; padding-top: 10px}
+.bill .ln.tot b { font-size: 34px}
+@keyframes lnIn { from { opacity: 0; transform: translate(-16px, 0)} to { opacity: 1; transform: none} }
+.wallet { display: inline-flex; align-items: center; gap: 6px; font-size: 26px; color: var(--gold-d)}
+.wallet .ic { width: 28px; height: 28px}
+
+/* 商店 */
+.shelf { display: flex; gap: 12px; flex-wrap: nowrap; justify-content: center; flex-wrap: wrap; padding: 18px 12px 12px; border-radius: 16px;
+  background: linear-gradient(var(--wood-l), var(--wood)); box-shadow: inset 0 3px 8px rgba(0,0,0,.28), inset 0 -8px 0 rgba(60,30,10,.25)}
+.shelf .ware { flex: none}
+.shelf.mk { background: linear-gradient(#9DB487, #7C9668)}
+.ware { width: 130px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--cream); transition: transform .18s}
+.ware .card { pointer-events: none}
+.ware:hover:not(:disabled) { transform: translateY(-8px) rotate(-1.5deg)}
+.ware:disabled:not(.sold) { opacity: .5; cursor: default}
+.ware.sold { cursor: default}
+.ware.sold .card { animation: bought .45s forwards}
+@keyframes bought { 40% { transform: scale(1.1)} 100% { transform: scale(.8); opacity: .25} }
+.ware .price { display: inline-flex; align-items: center; gap: 3px; height: 30px; padding: 0 12px; border-radius: 15px; background: rgba(43,36,32,.45); font-size: 19px}
+.ware .price .ic { width: 18px; height: 18px; color: var(--gold)}
+.ware .kind { font-size: 13px; height: 16px; opacity: .9; text-shadow: 0 1px 0 rgba(0,0,0,.3)}
+.ware.small { width: 92px}
+.shoprow { display: grid; grid-template-columns: 1fr auto; grid-gap: 14px; gap: 14px; align-items: start}
+.side { display: flex; flex-direction: column; gap: 10px; align-items: stretch}
+
+/* 菜谱商品：一块大水牌 */
+.card.recipe { --c: var(--rec); --t: var(--rec-t); width: 124px}
+.card.recipe .cf { background: linear-gradient(180deg, #FBF1DD, #EEDCB9)}
+.card.recipe .rnm { position: absolute; left: 8px; right: 8px; top: 12px; display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 19px; line-height: 22px; white-space: nowrap}
+.card.recipe .rnm.l { font-size: 16px; gap: 3px}
+.card.recipe .combo { position: absolute; left: 0; right: 0; top: 46px; display: flex; justify-content: center; align-items: center; gap: 1px}
+.card.recipe .combo .ic { width: 32px; height: 32px}
+.card.recipe .combo .i { color: var(--ing)} .card.recipe .combo .t { color: var(--tech)}
+.card.recipe .combo em { font-style: normal; color: var(--mute)}
+.card.recipe .eff { position: absolute; left: 8px; right: 8px; bottom: 12px; font-size: 16px; color: var(--cream); background: var(--rec); border-radius: 10px; padding: 3px 0}
+.card.recipe .eff s { text-decoration: none; opacity: .65; font-size: 13px}
+.card.recipe .lvb { flex: none; height: 20px; padding: 0 6px; border-radius: 10px; line-height: 20px !important; background: var(--gold); font-size: 13px; line-height: 22px; box-shadow: 0 2px 0 var(--gold-d)}
+
+/* 挑剔食客 */
+.boss-av { width: 110px; height: 110px; margin: 6px auto 4px; border-radius: 50%; background: var(--rec); color: var(--cream); padding: 24px; box-shadow: 0 0 0 8px var(--rec-t), 0 10px 0 6px rgba(0,0,0,.08); animation: wob 2.4s infinite ease-in-out}
+@keyframes wob { 50% { transform: rotate(-6deg) scale(1.04)} }
+.boss-rule { display: inline-flex; align-items: center; gap: 8px; font-size: 26px; color: var(--rec); background: var(--rec-t); padding: 8px 18px; border-radius: 14px; margin-top: 10px}
+.boss-rule .ic { width: 28px; height: 28px}
+
+/* 精简牌组 */
+.decklist { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-height: 260px; overflow: auto; padding: 4px}
+.mini { width: 58px; height: 74px; border-radius: 9px; background: var(--paper); border: 2px solid var(--t); color: var(--c); padding: 6px 6px 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; transition: transform .15s}
+.mini .ic { width: 34px; height: 34px}
+.mini:hover { border-color: var(--rec); transform: translateY(-4px)}
+.mini.ing { --c: var(--ing); --t: var(--ing-t)} .mini.tech { --c: var(--tech); --t: var(--tech-t)} .mini.equip { --c: var(--equip); --t: var(--equip-t)} .mini.spice { --c: var(--spice); --t: var(--spice-t)}
+
+/* 说明页 */
+.howto { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0 6px; font-size: 16px; line-height: 1.45}
+.howto > div { background: var(--paper); border-radius: 14px; padding: 12px 8px}
+.howto .demo { height: 56px; display: flex; justify-content: center; align-items: center; gap: 3px; margin-bottom: 6px}
+.howto .demo > span { display: inline-block; width: 36px; height: 36px}
+.howto .i { color: var(--ing)} .howto .t { color: var(--tech)} .howto .r { color: var(--rec)} .howto .e { color: var(--equip)} .howto .s { color: var(--spice)} .howto .g { color: var(--gold-d)}
+.howto .demo b { font-size: 24px}
+.howto .demo em { font-style: normal; color: var(--mute)}
+
+@media (max-width: 900px) {
+  :root { --cw: 84px; --ch: 118px}
+  #app { grid-template-columns: 1fr; padding: 10px; grid-gap: 12px; gap: 12px}
+  #ticket { position: relative; top: 0; transform: none; display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; padding: 18px 14px 14px}
+  #ticket .dash, #calcTot, .t-goal { display: none}
+  #ticket > .t-row:first-of-type { grid-column: 1} #pips { grid-column: 1} #bossTag { grid-column: 1 / -1}
+  .t-score { grid-column: 2; grid-row: 1 / 3} #calc { grid-column: 3; grid-row: 1 / 3; width: 150px}
+  .t-counts { grid-column: 1 / 3} .t-coins { grid-column: 3}
+  #calc .box { height: 40px; font-size: 22px}
+  #rail { min-height: 120px} .rule { width: 58px; min-height: 104px} .rule .rn { font-size: 17px} .rule .rn.l { font-size: 14px} .rule .rc .ic { width: 17px; height: 17px}
+  #stove { padding: 12px 12px 26px; min-height: 0} #pot { margin-top: 36px; height: calc(var(--ch) + 24px)}
+  #board { grid-template-columns: 1fr auto; grid-template-areas: "hand hand" "piles acts"}
+  #hand { grid-area: hand; height: calc(var(--ch) + 50px)} #piles { grid-area: piles; flex-direction: row} #acts { grid-area: acts; width: 230px; grid-template-columns: 1fr 1fr 44px; grid-template-rows: 58px}
+  .act.play { grid-column: 1} #acts .disc { grid-row: 1; grid-column: 2} .act.sort { grid-row: 1; grid-column: 3}
+  .howto { grid-template-columns: 1fr 1fr} .shoprow { grid-template-columns: 1fr}
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important} }
+
+/* 效果小标签：蓝=加分，红=倍率，紫=改规则（和小票上的「分 × 倍」同色） */
+.fxp { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 13px; line-height: 20px; color: #fff; white-space: nowrap; vertical-align: 1px}
+.fxp.c { background: var(--chip)} .fxp.m { background: var(--mult)} .fxp.r { background: var(--spice)}
+.rule .eq { background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 3px}
+.rule .eq .fxp { height: 19px; padding: 0 5px; font-size: 12px}
+.card.recipe .eff { background: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px}
+.card.recipe .eff .fxp { font-size: 14px; height: 22px}
+.card.recipe .eff s { color: var(--mute); opacity: 1}
+.card.recipe .eff em { font-style: normal; color: var(--mute)}
+
+/* 牌堆查看 */
+.tabs { display: flex; gap: 6px; justify-content: center; margin: 14px 0 8px}
+.tabs .tab { height: 38px; padding: 0 16px; border-radius: 12px; background: var(--paper-d); color: var(--mute); font-size: 16px}
+.tabs .tab b { font-family: var(--font); margin-left: 4px}
+.tabs .tab.on { background: var(--iron); color: var(--cream)}
+.pv { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 4px; text-align: left; max-height: 50vh; overflow: auto}
+.pv-t { font-size: 15px; margin: 0 0 6px 4px}
+.pv-t.ing { color: var(--ing)} .pv-t.tech { color: var(--tech)} .pv-t.equip { color: var(--equip)} .pv-t.spice { color: var(--spice)}
+.pv .decklist { justify-content: flex-start; max-height: none}
+.mini { position: relative; cursor: default}
+.mini .n { position: absolute; right: -6px; top: -6px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--iron); color: var(--cream); font-size: 12px; line-height: 22px; text-align: center; padding: 0 4px}
+.pile { cursor: pointer; transition: transform .15s}
+.pile:hover { transform: translate(0, -3px)}
+
+
+/* 说明页 */
+.help { text-align: left; max-width: 720px; margin: 16px auto 0; display: flex; flex-direction: column; gap: 14px}
+.help h3 { font-size: 18px; font-weight: 400; margin: 0 0 6px; color: var(--ink)}
+.help p { margin: 0; font-size: 15px; line-height: 1.6; color: #4A4038}
+.help .box { background: var(--paper); border-radius: 14px; padding: 12px 16px}
+.help .tags { display: grid; grid-template-columns: auto 1fr; grid-gap: 6px 12px; gap: 6px 12px; align-items: center; font-size: 15px; color: #4A4038; margin-top: 4px}
+.help .tags .fxp { justify-self: start}
+.help .ty { display: inline-block; padding: 0 7px; border-radius: 8px; font-size: 14px}
+.help .ty.ing { background: var(--ing-t); color: var(--ing)} .help .ty.tech { background: var(--tech-t); color: var(--tech)}
+.help .ty.spice { background: var(--spice-t); color: var(--spice)} .help .ty.equip { background: var(--equip-t); color: var(--equip)}
+.help .eqn { font-size: 17px; color: var(--ink)}
+.help .eqn .c { color: var(--chip)} .help .eqn .m { color: var(--mult)}
+
+/* 伙计、礼包商品卡 */
+.card.helper { --c: #3E5A3A; --t: #DDE7D6}
+.card.pack { --c: var(--spice); --t: var(--spice-t)}
+.card.helper .cf, .card.pack .cf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px}
+.hav, .pkic { width: 52px; height: 52px; border-radius: 50%; background: var(--c); color: var(--cream); padding: 11px; flex: none}
+.pkic { border-radius: 14px}
+.card.pack.ing { --c: var(--ing)} .card.pack.tech { --c: var(--tech)} .card.pack.recipe { --c: var(--rec)}
+.hnm { font-size: 17px; line-height: 1.1}
+.hds { font-size: 13px; line-height: 1.3; color: var(--c); background: var(--t); border-radius: 8px; padding: 3px 6px}
+.ware .card.helper, .ware .card.pack { pointer-events: none}
+.shelf.pkopen { min-height: 190px}
+.pkw { animation: flipIn .45s cubic-bezier(.3,1.4,.5,1) backwards}
+@keyframes flipIn { from { opacity: 0; transform: rotateY(90deg) translateY(20px)} }
+/* 印记 */
+.stp { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 13px; color: #fff; transform: rotate(-8deg); box-shadow: 0 2px 0 rgba(0,0,0,.2)}
+.stp.c { background: var(--chip)} .stp.m { background: var(--mult)} .stp.g { background: var(--gold-d)}   /* 左上：手牌压叠时也露得出来 */
+.mini .stp { position: absolute; left: -6px; top: -6px; width: 20px; height: 20px; font-size: 12px}
+/* 小票上的伙计 */
+#helpers { display: flex; gap: 6px}
+#helpers:empty { display: none}
+.hchip { width: 34px; height: 34px; border-radius: 10px; background: #3E5A3A; color: var(--cream); padding: 6px; box-shadow: 0 2px 0 #273C25}
+.hchip.hit { animation: hit .45s}
+@media (max-width: 900px) { .shop { grid-template-columns: 1fr} .sh-row2 { grid-template-columns: 1fr} }
+
+.ware { position: relative}
+.ware .qty { position: absolute; right: 2px; top: 22px; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 13px; background: var(--iron); color: var(--cream); font-size: 15px; line-height: 26px; z-index: 3; box-shadow: 0 2px 0 rgba(0,0,0,.3)}
+.shelf.mk { flex-wrap: wrap}
+
+
+/* 牌组窗口（游戏中、商店共用） */
+.tabs .tab:disabled { opacity: .4; cursor: default}
+.tiles { display: flex; flex-wrap: wrap; gap: 14px 10px}
+.tile { position: relative; width: 86px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; background: none; border: 0; font: inherit; color: inherit}
+.tile .card { --cw: 72px; --ch: 100px; pointer-events: none; transition: transform .15s}
+.tile .n { position: absolute; right: 0; top: -7px; min-width: 24px; height: 22px; border-radius: 11px; background: var(--iron); color: var(--cream); font-size: 12px; line-height: 22px; text-align: center; padding: 0 5px; z-index: 3}
+.tile .fn { font-size: 12px; line-height: 1.3; color: var(--mute); text-align: center; min-height: 16px}
+.tile .sfx { font-size: 12px; line-height: 18px; color: #fff; border-radius: 9px; padding: 0 7px; white-space: nowrap}
+.sfx.c { background: var(--chip)} .sfx.m { background: var(--mult)} .sfx.g { background: var(--gold-d)}
+button.tile { cursor: pointer}
+button.tile:hover:not(:disabled) .card { transform: translateY(-5px)}
+button.tile:disabled { opacity: .4; cursor: default}
+
+/* ===== 商店：统一区块 ===== */
+#sheet.wide { width: 97vw; max-width: 1160px; padding: 20px 22px}
+.shop-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px}
+.shop-top h1 { margin-right: auto !important}
+.shop-top .wallet { font-size: 30px}
+.pill.sm { height: 40px; font-size: 15px; padding: 0 14px}
+.shop { display: grid; grid-template-columns: minmax(0, 1fr) 272px; grid-gap: 14px; gap: 14px; align-items: start; text-align: left}
+.shop .col { display: flex; flex-direction: column; gap: 14px; min-width: 0}
+.shop .two { display: grid; grid-template-columns: 1fr 230px; grid-gap: 14px; gap: 14px}
+.blk { --bg: var(--paper); --hd: var(--ink); --in: rgba(255,255,255,.5); border-radius: 16px; background: var(--bg); overflow: hidden; box-shadow: inset 0 -4px 0 rgba(0,0,0,.12), 0 6px 12px -10px rgba(0,0,0,.5)}
+.blk > header { display: flex; align-items: center; gap: 7px; padding: 9px 14px 0; color: var(--hd)}
+.blk > header .ic { width: 20px; height: 20px}
+.blk > header b { font-size: 17px}
+.blk > header span { margin-left: auto; font-size: 13px; opacity: .75}
+.blk-in { padding: 10px 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center}
+.blk.wood { --bg: linear-gradient(#D2A87A, #B78656); --hd: var(--cream)}
+.blk.green { --bg: linear-gradient(#A2B98C, #7F9A6B); --hd: var(--cream)}
+.blk.purple { --bg: linear-gradient(#C9A1C6, #9C7299); --hd: var(--cream)}
+.blk.dark { --bg: linear-gradient(#56704F, #3E5A3A); --hd: var(--cream)}
+.blk.ember { --bg: linear-gradient(#F2B282, #DE8B54); --hd: #3A1A08}
+.blk.paper { --bg: linear-gradient(#EFE3CC, #E2D2B4); --hd: var(--ink)}
+.blk.wood .blk-in, .blk.green .blk-in { justify-content: center}
+.side .blk-in, .two .blk.purple .blk-in { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 8px}
+/* 商品卡 */
+.ware { width: 124px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--cream); transition: transform .18s}
+.ware .kind { font-size: 12px; height: 15px; text-shadow: 0 1px 0 rgba(0,0,0,.3)}
+.ware .qty { top: 20px; right: 4px}
+.ware .sfx { position: absolute; top: 112px; z-index: 3; box-shadow: 0 2px 0 rgba(0,0,0,.25)}
+.ware .cost { display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(43,36,32,.5); color: var(--cream); font-size: 18px}
+.ware .cost .ic { width: 17px; height: 17px; color: var(--gold)}
+.blk.green .ware { width: 96px}
+.blk.green .ware .sfx { top: 104px}
+/* 横条商品（礼包、升级、服务、菜包共用） */
+.tile2 { display: grid; grid-template-columns: 38px 1fr auto; gap: 9px; align-items: center; padding: 7px 10px 7px 7px; border-radius: 12px; background: var(--cream); color: var(--ink);
+  text-align: left; box-shadow: 0 3px 0 rgba(0,0,0,.14); transition: transform .12s, box-shadow .12s; font: inherit}
+.tile2:hover:not(:disabled) { box-shadow: 0 5px 0 rgba(0,0,0,.14); transform: translateY(-2px)}
+.tile2:active:not(:disabled) { box-shadow: 0 1px 0 rgba(0,0,0,.14); transform: translateY(2px)}
+.tile2:disabled { opacity: .5; cursor: default}
+.tile2 .t2-ic { width: 38px; height: 38px; border-radius: 10px; background: var(--ember-d); color: var(--cream); padding: 7px}
+.tile2 .t2-ic.st { background: var(--spice)}
+.tile2 .t2-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0}
+.tile2 .t2-tx b { font-size: 15px; line-height: 1.15}
+.tile2 .t2-tx small { font-size: 12px; color: var(--mute); line-height: 1.2}
+.tile2 .cost { display: inline-flex; align-items: center; gap: 2px; font-size: 16px; color: var(--gold-d); white-space: nowrap}
+.tile2 .cost .ic { width: 15px; height: 15px}
+.cost.no { color: #B5432F !important}
+.tile2 .ul { display: flex; gap: 3px} .tile2 .ul i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ember)} .tile2 .ul i.on { background: var(--ember)}
+.side .ember .blk-in { display: grid; grid-template-columns: 1fr 1fr}
+.side .ember .tile2 { grid-template-columns: 28px 1fr; grid-template-rows: auto auto; grid-gap: 2px 7px; gap: 2px 7px; padding: 7px}
+.side .ember .tile2 .t2-ic { grid-row: 1 / 3; width: 28px; height: 28px; padding: 5px; border-radius: 8px}
+.side .ember .tile2 .cost { grid-column: 2; font-size: 14px}
+.pkb .t2-ic { background: var(--spice)} .pkb.ing .t2-ic { background: var(--ing)} .pkb.tech .t2-ic { background: var(--tech)} .pkb.recipe .t2-ic { background: var(--rec)}
+.tile2.sold { opacity: .45}
+/* 打折菜包 */
+.tile2.box { grid-template-columns: 1fr; gap: 6px; padding: 10px 12px; flex: 1 1 200px; max-width: 280px}
+.box .t2-h { display: flex; align-items: center; gap: 8px} .box .t2-h b { font-size: 16px}
+.box .disc { margin-left: auto; background: #B5432F; color: #fff; font-size: 13px; padding: 1px 8px; border-radius: 9px; transform: rotate(4deg); box-shadow: 0 2px 0 rgba(0,0,0,.2)}
+.bx-items { display: flex; flex-wrap: wrap; gap: 4px}
+.bx { position: relative; width: 30px; height: 30px; border-radius: 8px; padding: 4px; background: var(--t); color: var(--c)}
+.bx.ing { --c: var(--ing); --t: var(--ing-t)} .bx.tech { --c: var(--tech); --t: var(--tech-t)}
+.bx i { position: absolute; right: -4px; top: -4px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--iron); color: var(--cream); font-size: 10px; line-height: 15px; text-align: center; font-style: normal}
+.box .t2-f { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute)}
+.box .t2-f s { margin-left: auto; color: var(--mute)}
+/* 伙计槽 */
+.hrow { display: flex; gap: 8px}
+.hslot { flex: 1; height: 60px; border-radius: 12px; background: var(--cream); color: #3E5A3A; padding: 12px; display: grid; place-items: center; box-shadow: 0 3px 0 rgba(0,0,0,.2); transition: transform .12s}
+.hslot .ic { width: 32px; height: 32px}
+.hslot:hover { transform: translateY(-2px)}
+.hslot.empty { background: none; border: 2px dashed rgba(252,248,239,.4); box-shadow: none}
+/* 随机加工的结果 */
+.ench-got { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 2px 4px}
+.eg { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; background: var(--cream); border-radius: 10px; padding: 3px 8px 3px 4px}
+.eg .stp { width: 20px; height: 20px; font-size: 12px}
+@media (max-width: 900px) { .shop { grid-template-columns: 1fr} .shop .two { grid-template-columns: 1fr} }
+.ware .sfx, .blk.green .ware .sfx { position: static; font-size: 11px; line-height: 17px; padding: 0 6px; margin-top: -1px}
+.ware .qty { right: auto; left: 0}
+@media (max-width: 900px) { .hav, .pkic { width: 38px; height: 38px; padding: 8px} .hnm { font-size: 14px} .hds { font-size: 11px; padding: 2px 4px} .card.helper .cf { gap: 4px; padding: 8px 5px} }
+
+/* 牌组窗口：每张牌单独显示，一排放不下就压叠 */
+.fan { position: relative; height: 118px; margin: 0 4px}
+.fan .card { position: absolute; top: 8px; --cw: 76px; --ch: 106px; transition: transform .15s}
+.fan .card:hover { transform: translateY(-8px)}   /* 压叠时露出的是左边，印记放左上 */
+.fan .card.pick { cursor: pointer}
+.fan .card.off { opacity: .4; cursor: default}
+.pv-g { min-width: 0}
+#sheet .legend { margin: 8px 0 0}
+#sheet .legend .stp { width: 20px; height: 20px; font-size: 12px}
+#sheet .legend { gap: 14px}
+#sheet .legend > span { gap: 5px}
+/* 打折菜包：三包并排 */
+#boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: stretch}
+#boxes .tile2.box { max-width: none; padding: 8px 9px}
+#boxes .box .t2-h b { font-size: 14px}
+#boxes .bx { width: 24px; height: 24px; padding: 3px; border-radius: 6px}
+#boxes .bx-items { gap: 3px; align-content: flex-start; min-height: 51px}
+@media (max-width: 900px) { #boxes { grid-template-columns: 1fr} }
+
+/* ===== Chrome 61 回退（由 /tmp/gapfb.py 生成）=====
+ * Flexbox gap 需 Chrome 84：JS 实测不支持时给 <html> 加 .no-flex-gap，改用子项单边 margin。
+ * Grid 用 grid-gap（Chrome 57+），gap 简写放在后面覆盖。 */
+@media (min-width: 901px) { .no-flex-gap #ticket > * + * { margin-top: 12px; } }
+.no-flex-gap .t-row > * + * { margin-left: 8px; }
+.no-flex-gap #pips > * + * { margin-left: 5px; }
+.no-flex-gap .t-coins > * + * { margin-left: 8px; }
+.no-flex-gap .bosschip > * + * { margin-left: 8px; }
+.no-flex-gap #main > * + * { margin-top: 14px; }
+.no-flex-gap #rules > * + * { margin-left: 12px; }
+.no-flex-gap .rule .rc > * + * { margin-left: 1px; }
+.no-flex-gap #equips > * + * { margin-left: 6px; }
+.no-flex-gap #spices > * + * { margin-left: 6px; }
+.no-flex-gap .chipx > * + * { margin-left: 3px; }
+.no-flex-gap #flame > * + * { margin-left: 14px; }
+.no-flex-gap .cf .idx > * + * { margin-top: 3px; }
+.no-flex-gap .cf .mk > * + * { margin-left: 4px; }
+.no-flex-gap #piles > * + * { margin-top: 16px; }
+.no-flex-gap .act > * + * { margin-top: 2px; }
+.no-flex-gap .act.disc > * + * { margin-left: 6px; }
+.no-flex-gap #sheet h2 > * + * { margin-left: 8px; }
+.no-flex-gap .btns > * { margin: 0 12px 12px 0; }
+.no-flex-gap .pill > * + * { margin-left: 8px; }
+.no-flex-gap .pill .cost > * + * { margin-left: 2px; }
+.no-flex-gap .bill .ln > * + * { margin-left: 8px; }
+.no-flex-gap .wallet > * + * { margin-left: 6px; }
+.no-flex-gap .shelf > * + * { margin-left: 12px; }
+.no-flex-gap .ware > * + * { margin-top: 6px; }
+.no-flex-gap .ware .price > * + * { margin-left: 3px; }
+.no-flex-gap .side > * + * { margin-top: 10px; }
+.no-flex-gap .card.recipe .rnm > * + * { margin-left: 5px; }
+.no-flex-gap .card.recipe .rnm.l > * + * { margin-left: 3px; }
+.no-flex-gap .card.recipe .combo > * + * { margin-left: 1px; }
+.no-flex-gap .boss-rule > * + * { margin-left: 8px; }
+.no-flex-gap .decklist > * { margin: 0 6px 6px 0; }
+.no-flex-gap .mini > * + * { margin-top: 2px; }
+.no-flex-gap .howto .demo > * + * { margin-left: 3px; }
+.no-flex-gap .rule .eq > * + * { margin-top: 3px; }
+.no-flex-gap .card.recipe .eff > * { margin: 0 3px 3px 0; }
+.no-flex-gap .tabs > * + * { margin-left: 6px; }
+.no-flex-gap .pv > * + * { margin-top: 12px; }
+.no-flex-gap .help > * + * { margin-top: 14px; }
+.no-flex-gap .card.helper .cf > * + * { margin-top: 6px; }
+.no-flex-gap .card.pack .cf > * + * { margin-top: 6px; }
+.no-flex-gap #helpers > * + * { margin-left: 6px; }
+.no-flex-gap .tiles > * { margin: 0 10px 14px 0; }
+.no-flex-gap .tile > * + * { margin-top: 4px; }
+.no-flex-gap .shop-top > * + * { margin-left: 14px; }
+.no-flex-gap .shop .col > * + * { margin-top: 14px; }
+.no-flex-gap .blk > header > * + * { margin-left: 7px; }
+.no-flex-gap .blk-in > * { margin: 0 10px 10px 0; }
+.no-flex-gap .side .blk-in > * + * { margin-top: 8px; }
+.no-flex-gap .two .blk.purple .blk-in > * + * { margin-top: 8px; }
+.no-flex-gap .ware > * + * { margin-top: 5px; }
+.no-flex-gap .ware .cost > * + * { margin-left: 3px; }
+.no-flex-gap .tile2 .t2-tx > * + * { margin-top: 2px; }
+.no-flex-gap .tile2 .cost > * + * { margin-left: 2px; }
+.no-flex-gap .tile2 .ul > * + * { margin-left: 3px; }
+.no-flex-gap .box .t2-h > * + * { margin-left: 8px; }
+.no-flex-gap .bx-items > * { margin: 0 4px 4px 0; }
+.no-flex-gap .box .t2-f > * + * { margin-left: 8px; }
+.no-flex-gap .hrow > * + * { margin-left: 8px; }
+.no-flex-gap .ench-got > * { margin: 0 6px 6px 0; }
+.no-flex-gap .eg > * + * { margin-left: 4px; }
+.no-flex-gap #sheet .legend > * + * { margin-left: 14px; }
+.no-flex-gap #sheet .legend > span > * + * { margin-left: 5px; }
+.no-flex-gap #boxes .bx-items > * { margin: 0 3px 3px 0; }
+@media (max-width: 900px) {
+  .no-flex-gap .card.helper .cf > * + * { margin-top: 4px; }
+}
+
+/* ===== 弹窗通用：四周留空 ===== */
+#veil { padding: 16px; }
+#sheet { max-height: calc(100vh - 32px); }
+/* 牌组窗口：大小固定，不随页签内容变化，牌在内部滚动 */
+#sheet.deckwin { display: flex; flex-direction: column; width: 92vw; max-width: 900px; height: 78vh; max-height: 680px; overflow: hidden; }
+#sheet.deckwin > * { flex: none; }
+#sheet.deckwin #dkList { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; margin: 10px -6px 4px; padding: 6px 6px 10px; }
+#sheet.deckwin .btns { margin-top: 10px; }
+
+/* ===== 竖屏手机（≤600px）：整体缩小，牌不叠放 ===== */
+@media (max-width: 600px) {
+  :root { --cw: 66px; --ch: 92px; }
+  #app { padding: 12px 12px 14px; padding-top: calc(12px + var(--top-avoid, 0px)); grid-gap: 10px; gap: 10px; min-height: 0; }
+  @supports (padding-top: env(safe-area-inset-top)) {
+    #app { padding-top: calc(12px + var(--top-avoid, var(--safe-area-inset-top, env(safe-area-inset-top, 0px))));
+      padding-bottom: calc(14px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+      padding-left: calc(12px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
+      padding-right: calc(12px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px))); }
+  }
+  #main { gap: 10px; }
+  .no-flex-gap #main > * + * { margin-top: 10px; }
+
+  /* 小票：两行紧凑排布 */
+  #ticket { grid-template-columns: auto 1fr auto; grid-gap: 6px 10px; gap: 6px 10px; padding: 14px 12px 10px; }
+  #ticket .clip { width: 48px; height: 16px; margin-left: -24px; top: -7px; }
+  #lvname { font-size: 18px; }
+  .qm { width: 24px; height: 24px; font-size: 13px; margin-left: 6px; }
+  #pips i { width: 13px; height: 13px; } #pips i.boss { width: 16px; height: 16px; margin-top: -1px; }
+  .t-score .lb { display: none; }
+  #got { font-size: 32px; }
+  #bar { height: 7px; margin-top: 4px; }
+  #calc { width: 118px; grid-gap: 4px; gap: 4px; }
+  #calc .box { height: 32px; font-size: 18px; border-radius: 8px; }
+  #calc .x { font-size: 15px; }
+  .cnt { padding: 3px 0 2px; border-radius: 8px; }
+  .cnt b { font-size: 18px; } .cnt span { font-size: 11px; }
+  #coinIco { width: 20px; height: 20px; } #coins { font-size: 22px; }
+  #interest { font-size: 11px; }
+  .bosschip { padding: 5px 7px; } .bosschip .av { width: 26px; height: 26px; padding: 4px; }
+  .bosschip b { font-size: 13px; } .bosschip span { font-size: 12px; }
+  #helpers .hchip { width: 26px; height: 26px; padding: 4px; }
+
+  /* 菜谱水牌：缩小 */
+  #rail { min-height: 0; padding-top: 4px; }
+  #rail::before { top: 3px; height: 5px; }
+  #rules { min-height: 0; gap: 8px; padding: 0 4px 8px; }
+  .no-flex-gap #rules > * + * { margin-left: 8px; }
+  .rule { width: 46px; min-height: 82px; margin-top: 10px; padding: 7px 2px 5px; border-radius: 4px 4px 9px 9px; }
+  .rule::before { top: -10px; height: 12px; }
+  .rule .rc .ic { width: 14px; height: 14px; }
+  .rule .rn { font-size: 13px; margin: 3px 0; } .rule .rn.l { font-size: 11px; }
+  .rule .eq .fxp { font-size: 10px; height: 15px; line-height: 15px; padding: 0 4px; }
+  .rule .x { min-width: 18px; height: 18px; font-size: 10px; line-height: 18px; right: -6px; }
+  .rule .lv { height: 15px; font-size: 10px; line-height: 15px; left: -5px; }
+
+  /* 灶台：缩小，槽位按网格排开、放不下就换行 */
+  #stove { padding: 8px 10px 24px; border-radius: 16px; }
+  #equips, #spices { top: 8px; } #equips { left: 10px; }
+  .chipx { height: 22px; font-size: 12px; padding: 0 7px 0 4px; } .chipx .ic { width: 17px; height: 17px; }
+  #pot { margin-top: 28px; height: calc(var(--ch) + 24px); }
+  #flame { bottom: 5px; gap: 9px; height: 14px; } #flame i { width: 10px; }
+  .no-flex-gap #flame > * + * { margin-left: 9px; }
+  #warn { bottom: 2px; font-size: 15px; }
+  #warn .ic { width: 16px; height: 16px; }
+
+  /* 卡面缩小 */
+  .cf { border-radius: 10px; }
+
+  /* 手牌：扇形；选中沿牌的角度弹出 */
+  #board { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "hand hand" "piles acts"; grid-gap: 10px 12px; gap: 10px 12px; }
+  #hand { height: calc(var(--ch) + 46px); }
+  #hand .card { bottom: 10px; }
+  #hand .card.peek .cf { transform: translateY(-14px); }
+  #hand .card.sel .cf, #hand .card.sel.peek .cf { transform: translateY(-24px); box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--ember), 0 12px 14px -8px rgba(30,15,0,.7); }
+
+  /* 牌堆和按钮 */
+  #piles { gap: 10px; padding-bottom: 0; align-items: flex-end; }
+  .no-flex-gap #piles > * + * { margin-top: 0; margin-left: 10px; }
+  .pile { width: 40px; height: 56px; } .pile i { border-radius: 6px; }
+  .pile b { font-size: 17px; left: calc(50% + 3px); top: calc(50% - 3px); }
+  .pile.dis { width: 34px; height: 48px; } .pile.dis b { font-size: 14px; left: 50%; top: 50%; }
+  .pile i:nth-child(2) { transform: translate(2px, -2px); } .pile i:nth-child(3) { transform: translate(4px, -4px); }
+  #acts { width: auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 46px; grid-template-rows: 56px; grid-gap: 8px; gap: 8px; padding-bottom: 4px; }
+  .act { font-size: 18px; border-radius: 14px; white-space: nowrap; padding: 0 6px; flex-direction: row; gap: 5px; letter-spacing: 0; } .act.play, .act.disc { font-size: 18px; flex-direction: row; gap: 5px; }
+  .no-flex-gap .act > * + * { margin-top: 0; margin-left: 5px; }
+  .act .ico, .act.disc .ico, .act.sort .ico { width: 22px; height: 22px; flex: none; }
+
+  /* 弹窗：四周留空，字号缩小 */
+  #veil { padding: 12px; }
+  #sheet { width: 100%; max-width: none; padding: 18px 14px 16px; border-radius: 18px; max-height: calc(100vh - 24px); }
+  #sheet.wide { width: 100%; padding: 16px 12px; }
+  #sheet h1 { font-size: 28px; }
+  #sheet .big { font-size: 42px; }
+  .pill { height: 44px; font-size: 17px; padding: 0 18px; }
+  .btns { margin-top: 12px; }
+  .bill { font-size: 16px; } .bill .ln.tot b { font-size: 28px; }
+  #sheet.deckwin { width: 100%; height: 72vh; max-height: 600px; padding: 14px 12px 12px; }
+  #sheet.deckwin h1 { font-size: 22px; }
+  #sheet.deckwin .sub { font-size: 13px !important; margin-top: 2px; }
+  #sheet.deckwin .tabs { margin: 8px 0 4px; }
+  #sheet.deckwin .pill { height: 40px; font-size: 15px; }
+  #sheet.deckwin .tabs .tab { height: 34px; padding: 0 10px; font-size: 14px; }
+  #sheet .legend { gap: 8px; font-size: 12px; }
+
+  /* 牌组窗口里的牌：网格，不叠放 */
+  .fan { height: 96px; } .fan .card { --cw: 62px; --ch: 86px; top: 6px; }
+  .pv-t { font-size: 14px; margin-bottom: 5px; }
+
+  /* 商店 */
+  .shop-top { margin-bottom: 8px; gap: 8px; } .shop-top .wallet { font-size: 22px; }
+  .blk-in { padding: 8px 8px 10px; gap: 8px; }
+  .ware { width: 72px; }
+  .card.recipe { width: 72px; }
+  .ware .kind { font-size: 10px; white-space: nowrap; }
+  .card.helper .cf, .card.pack .cf { padding: 6px 4px; }
+  #boxes .bx-items { min-height: 0; }
+  #boxes .tile2.box { padding: 8px 10px; }
+  .blk > header span { font-size: 11px; }
+  .card.recipe .rnm { font-size: 14px; top: 9px; } .card.recipe .rnm.l { font-size: 12px; }
+  .card.recipe .combo { top: 34px; } .card.recipe .combo .ic { width: 22px; height: 22px; }
+  .card.recipe .eff .fxp { font-size: 11px; height: 17px; }
+  .ware .cost { font-size: 15px; height: 24px; padding: 0 9px; }
+  .howto, .help { font-size: 14px; }
+}
+/* 窄屏：一行至少放 5 张牌 */
+@media (max-width: 400px) {
+  :root { --cw: 60px; --ch: 84px; }
+}
+/* 矮屏（如 375×667）：整体再压一档，保证一屏放得下 */
+@media (max-width: 600px) and (max-height: 760px) {
+  :root { --cw: 56px; --ch: 78px; }
+  #app { padding-top: calc(10px + var(--top-avoid, 0px)); padding-bottom: 10px; grid-gap: 8px; gap: 8px; }
+  #main { gap: 8px; } .no-flex-gap #main > * + * { margin-top: 8px; }
+  #ticket { padding: 11px 10px 7px; grid-gap: 4px 10px; gap: 4px 10px; }
+  #lvname { font-size: 16px; } #got { font-size: 26px; }
+  #calc .box { height: 28px; font-size: 16px; }
+  .cnt b { font-size: 16px; } .cnt span { font-size: 10px; }
+  #coins { font-size: 19px; }
+  .rule { min-height: 62px; width: 40px; margin-top: 9px; padding: 6px 2px 4px; }
+  .rule .rc .ic { width: 12px; height: 12px; }
+  .rule .rn { font-size: 11px; margin: 2px 0; } .rule .rn.l { font-size: 9px; }
+  .rule .eq .fxp { font-size: 9px; height: 13px; line-height: 13px; }
+  #rules { padding-bottom: 6px; }
+  #stove { padding: 6px 8px 18px; }
+  #pot { margin-top: 24px; height: calc(var(--ch) + 20px); }
+  #flame { height: 11px; } #flame i { width: 8px; }
+  #acts { grid-template-rows: 50px; }
+  .pile { width: 34px; height: 48px; } .pile.dis { width: 30px; height: 42px; } .pile b { font-size: 15px; }
+}
+/* 高屏手机（如 390×844）：底部空余多，牌和灶台放大一档 */
+@media (max-width: 600px) and (min-height: 800px) {
+  :root { --cw: 74px; --ch: 104px; }
+  .rule { width: 50px; min-height: 92px; } .rule .rn { font-size: 14px; }
+  #pot { margin-top: 32px; height: calc(var(--ch) + 28px); }
+  #stove { padding-bottom: 28px; }
+  #hand { height: calc(var(--ch) + 54px); }
+  #acts { grid-template-rows: 60px; }
+}
+
+/* ===== 分数：总分 / 目标分 ===== */
+.t-score .sc { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.t-score .of { font-size: 22px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.t-score .of b { font-size: inherit; margin-left: 3px; color: var(--ink); }
+.no-flex-gap .t-score .sc > * + * { margin-left: 4px; }
+@media (max-width: 900px) { .t-score .lb { display: none; } .t-score .of { font-size: 18px; } }
+@media (max-width: 600px) { .t-score .of { font-size: 15px; } }
+
+/* ===== 商店窗口：和牌组窗口一样大小固定、四周留空、不滚动 ===== */
+#sheet.shopwin { display: flex; flex-direction: column; width: 92vw; max-width: 900px; height: 78vh; max-height: 680px; min-height: 0; overflow: hidden; padding: 18px 20px 16px; text-align: left; }
+#sheet.shopwin > * { flex: none; }
+#sheet.shopwin .shop-top { margin-bottom: 10px; }
+#sheet.shopwin .shop-top h1 { font-size: 34px; }
+#sheet.shopwin .shop { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 250px; grid-template-rows: minmax(0, 1fr) auto; grid-gap: 12px; gap: 12px; }
+#sheet.shopwin .blk { display: flex; flex-direction: column; min-height: 0; }
+#sheet.shopwin .blk > header { flex: none; }
+#sheet.shopwin .blk-in { flex: 1 1 auto; min-height: 0; }
+#sheet.shopwin .blk.wood { grid-column: 1 / -1; }
+#sheet.shopwin #shelf { flex-wrap: nowrap; align-items: center; gap: 14px; }
+#sheet.shopwin .btns { margin-top: 12px; flex-wrap: nowrap; }
+.blk > header .rr { margin-left: 10px; flex: none; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 8px; border-radius: 14px; background: rgba(43,36,32,.32); color: var(--cream); font-size: 14px; box-shadow: 0 2px 0 rgba(43,36,32,.3); }
+.blk > header .rr .ic { width: 15px; height: 15px; }
+.blk > header .rr .cost { display: inline-flex; align-items: center; gap: 2px; margin-left: 2px; color: var(--gold); }
+.blk > header .rr .cost .ic { color: var(--gold); }
+.blk > header .rr .cost.no { color: #FFB4A3 !important; }
+.blk > header .rr:disabled { opacity: .5; cursor: default; }
+.no-flex-gap .blk > header .rr > * + * { margin-left: 4px; }
+
+/* 包：同一种样式，左边图标按种类上色 */
+#packs { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 10px; gap: 10px; align-content: center; }
+.pkb { --c: var(--spice); position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-gap: 10px; gap: 10px; align-items: center; padding: 10px 12px 10px 10px; border-radius: 14px;
+  background: var(--cream); color: var(--ink); text-align: left; font: inherit; box-shadow: 0 4px 0 rgba(0,0,0,.16); transition: transform .12s, box-shadow .12s; }
+.pkb:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,.16); }
+.pkb:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.16); }
+.pkb:disabled { opacity: .5; cursor: default; }
+.pkb.sold { opacity: .4; }
+.pk-ic { position: relative; width: 52px; height: 52px; border-radius: 13px; background: var(--c); color: var(--cream); padding: 11px; box-shadow: inset 0 -4px 0 rgba(0,0,0,.18); }
+.pk-ic > i { position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 50%; background: var(--cream); color: var(--c); padding: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.pk-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pk-tx b { font-size: 18px; line-height: 1.1; white-space: nowrap; }
+.pk-tx small { font-size: 13px; line-height: 1.2; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkb .cost { display: inline-flex; align-items: center; gap: 2px; font-size: 18px; color: var(--gold-d); white-space: nowrap; }
+.pkb .cost .ic { width: 16px; height: 16px; }
+.pkb.box, .pkb.ing { --c: var(--ing); } .pkb.tech { --c: var(--tech); } .pkb.recipe { --c: var(--rec); }
+.pkb.up { --c: var(--ember-d); } .pkb.stamp, .pkb.spice { --c: var(--spice); } .pkb.trim { --c: var(--equip); }
+.no-flex-gap .pk-tx > * + * { margin-top: 3px; }
+
+/* 伙计：三个格子 */
+#sheet.shopwin .blk.hl .blk-in { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 8px; gap: 8px; align-content: center; }
+#sheet.shopwin .hslot { height: 56px; padding: 10px; }
+
+/* 包里的灶台升级 */
+.card.upg { --c: var(--ember-d); --t: #F8E2CF; }
+.card.upg .cf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; }
+.card.upg .hds { letter-spacing: 2px; }
+.no-flex-gap .card.upg .cf > * + * { margin-top: 6px; }
+
+/* 打开包的窗口：同样固定大小 */
+#sheet.shopwin.pkwin { text-align: center; }
+#sheet.pkwin h1 { font-size: 32px; }
+#sheet.pkwin .shelf.pkopen { flex: 1 1 auto; min-height: 0; margin-top: 10px; align-content: center; align-items: center; overflow: hidden; }
+#sheet.pkwin .shelf.many { gap: 8px; }
+#sheet.pkwin .shelf.many .ware { width: 96px; }
+
+@media (max-width: 900px) {
+  #sheet.shopwin .shop { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto auto; }
+}
+@media (max-width: 600px) {
+  #sheet.shopwin { width: 100%; height: 86vh; max-height: 660px; padding: 14px 12px 12px; }
+  #sheet.shopwin .shop-top { margin-bottom: 8px; } #sheet.shopwin .shop-top h1 { font-size: 26px; }
+  #sheet.shopwin .shop-top .wallet { font-size: 22px; } #sheet.shopwin .wallet .ic { width: 22px; height: 22px; }
+  #sheet.shopwin .pill.sm { height: 36px; font-size: 14px; padding: 0 10px; }
+  #sheet.shopwin .shop { grid-gap: 8px; gap: 8px; }
+  #sheet.shopwin .blk > header { padding: 7px 10px 0; } #sheet.shopwin .blk > header b { font-size: 15px; }
+  #sheet.shopwin .blk > header span { font-size: 11px; }
+  #sheet.shopwin .blk-in { padding: 8px 8px 10px; }
+  #sheet.shopwin #shelf { gap: 6px; justify-content: space-between; }
+  #sheet.shopwin #shelf .ware { width: calc((100% - 18px) / 4); }
+  #sheet.shopwin #shelf .card.recipe, #sheet.shopwin #shelf .card.helper { width: 100%; }
+  .blk > header .rr { height: 24px; font-size: 12px; padding: 0 8px 0 6px; margin-left: 6px; }
+  #packs { grid-gap: 8px; gap: 8px; }
+  .pkb { grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; grid-gap: 2px 8px; gap: 2px 8px; padding: 8px 8px 8px 8px; border-radius: 12px; }
+  .pk-ic { grid-row: 1 / 3; width: 38px; height: 38px; padding: 7px; border-radius: 10px; }
+  .pk-ic > i { width: 18px; height: 18px; right: -5px; bottom: -5px; padding: 2px; }
+  .pk-tx b { font-size: 15px; } .pk-tx small { font-size: 11px; }
+  .pkb .cost { grid-column: 2; font-size: 15px; } .pkb .cost .ic { width: 14px; height: 14px; }
+  #sheet.shopwin .hslot { height: 44px; padding: 8px; } #sheet.shopwin .hslot .ic { width: 26px; height: 26px; }
+  #sheet.shopwin .blk.hl .blk-in { padding: 6px 8px 8px; }
+  #sheet.shopwin .btns { margin-top: 8px; gap: 8px; }
+  #sheet.shopwin .btns .pill { height: 46px; font-size: 16px; padding: 0 14px; }
+  #sheet.shopwin .btns .bosschip { padding: 4px 6px; } #sheet.shopwin .btns .bosschip b { font-size: 12px; } #sheet.shopwin .btns .bosschip span { font-size: 11px; }
+  #sheet.shopwin .btns .bosschip .av { width: 24px; height: 24px; padding: 4px; }
+  #sheet.pkwin h1 { font-size: 24px; }
+  #sheet.pkwin .shelf.pkopen { padding: 10px 6px; gap: 6px; }
+  #sheet.pkwin .shelf .ware { width: 74px; }
+  #sheet.pkwin .shelf .card.recipe { width: 72px; }
+  #sheet.pkwin .shelf.many .ware { width: 66px; }
+}
+@media (max-width: 600px) { }
+/* 商店各区块填满固定窗口，内容在区块里居中 */
+#sheet.shopwin .shop { align-items: stretch; }
+#sheet.shopwin #shelf { align-items: center; justify-content: center; }
+#sheet.shopwin #shelf .ware { transform-origin: 50% 100%; }
+@media (max-width: 600px) and (min-height: 800px) {
+  #sheet.shopwin .shop { grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr) auto; }
+  .pkb { padding: 12px 10px; }
+}
+@media (max-width: 600px) { #sheet.shopwin #shelf { justify-content: space-between; } }
+/* 电脑端：精选区高度富余，商品卡放大一档 */
+@media (min-width: 901px) and (min-height: 700px) { #sheet.shopwin #shelf .ware-art { zoom: 1.3; } }
+.ware.pkw.got:disabled { opacity: 1; } .ware.pkw.got .card { animation: none; }
+
+/* ===== 整个页面锁定在一屏：不滚动、不能下拉、不回弹 ===== */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+#app { height: 100%; min-height: 0; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+#main { min-height: 0; }
+@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } }
+/* 弹窗高度按可见区域算（手机浏览器地址栏会让 vh 偏大） */
+#sheet { max-height: calc(100% - 32px); }
+#sheet.deckwin, #sheet.shopwin { height: 78vh; height: 78dvh; }
+@media (max-width: 600px) { #sheet.deckwin { height: 72vh; height: 72dvh; } #sheet.shopwin { height: 86vh; height: 86dvh; } }
+/* 窗口内部能滚的地方：滚到头也不带动整页 */
+#sheet, #dkList, #rules { overscroll-behavior: contain; }
+/* 电脑端矮屏（如 1366×650、1024×600）：牌和灶台缩一档，保证一屏放下 */
+@media (min-width: 901px) and (max-height: 760px) {
+  :root { --cw: 88px; --ch: 124px; }
+  #app { padding-top: calc(12px + var(--top-avoid, 0px)); padding-bottom: 10px; grid-gap: 14px; gap: 14px; }
+  #main { gap: 10px; } .no-flex-gap #main > * + * { margin-top: 10px; }
+  #rail { min-height: 0; } #rules { min-height: 0; padding-bottom: 8px; }
+  .rule { width: 60px; min-height: 104px; margin-top: 12px; padding: 8px 3px 6px; }
+  .rule .rc .ic { width: 17px; height: 17px; } .rule .rn { font-size: 18px; } .rule .rn.l { font-size: 15px; }
+  #stove { min-height: 0; padding: 12px 18px 24px; } #pot { margin-top: 30px; height: calc(var(--ch) + 26px); }
+  #hand { height: calc(var(--ch) + 56px); } #hand .card { bottom: 16px; }
+  #acts { grid-template-rows: 62px 44px; }
+  #ticket { padding: 20px 14px 16px; gap: 9px; }
+  #got { font-size: 38px; } #calc .box { height: 42px; font-size: 24px; }
+}
+@media (min-width: 901px) and (max-height: 600px) {
+  :root { --cw: 78px; --ch: 110px; }
+  .rule { min-height: 88px; width: 54px; } .rule .rn { font-size: 15px; }
+  #pot { margin-top: 26px; } #hand { height: calc(var(--ch) + 48px); }
+  #acts { grid-template-rows: 54px 40px; }
+}
+
+/* ===== 统一卡面：按牌宽等比缩放，任何地方都是同一个样子 ===== */
+.card:not(.recipe):not(.helper):not(.pack):not(.upg) { font-size: calc(var(--cw) * .16); }
+.cf { border-radius: calc(var(--cw) * .13); }
+.cf::before { content: ""; position: absolute; top: .3em; right: .3em; bottom: .3em; left: .3em; border-radius: calc(var(--cw) * .09); border: .12em solid var(--t); pointer-events: none; }
+.cf .idx { position: absolute; left: .32em; top: .36em; width: 1.6em; display: flex; flex-direction: column; align-items: center; gap: .16em; z-index: 2; }
+.cf .pt { flex: none; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--c); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 1em; line-height: 1; box-shadow: inset 0 -.18em 0 rgba(0,0,0,.18); }
+.cf .pt .ic { width: .95em; height: .95em; stroke-width: 2.4; }
+.cf .mk { display: flex; align-items: center; justify-content: center; gap: .2em; height: .5em; color: var(--c); }
+.cf .mk i { width: .36em; height: .36em; border-radius: 50%; background: var(--c); }
+.cf .mk .lf { width: .75em; height: .75em; }
+.cf .vn { display: block; writing-mode: vertical-rl; -webkit-writing-mode: vertical-rl; white-space: nowrap; font-size: .9em; line-height: 1; letter-spacing: .04em; color: var(--ink); }
+.cf .vn.l { font-size: .8em; letter-spacing: 0; }
+.cf .plate { position: absolute; left: 59%; top: 54%; width: 3.5em; height: 3.5em; margin: -1.75em 0 0 -1.75em; border-radius: 50%; background: var(--t); }
+.cf .plate::after { content: ""; position: absolute; top: .3em; right: .3em; bottom: .3em; left: .3em; border-radius: 50%; border: .09em dashed rgba(255,255,255,.75); }
+.cf .art { position: absolute; top: .45em; right: .45em; bottom: .45em; left: .45em; color: var(--c); z-index: 1; }
+.cf .art .ic { stroke-width: 2.1; }
+.cf > .stp { position: absolute; left: .42em; bottom: .42em; top: auto; width: 1.25em; height: 1.25em; font-size: .78em; border-radius: .3em; z-index: 3; }
+.card.ban .ban-ic { position: absolute; right: .35em; bottom: .35em; width: 1.5em; height: 1.5em; color: var(--rec); z-index: 2; }
+.no-flex-gap .cf .idx > * + * { margin-top: .16em; }
+.no-flex-gap .cf .mk > * + * { margin-left: .2em; }
+
+/* 商店、包里的牌：尺寸只改牌宽，卡面跟着等比缩放 */
+.ware .card:not(.helper):not(.pack):not(.upg) { --cw: 96px; --ch: 134px; }
+.ware { width: auto; min-width: 0; }
+#sheet.pkwin .shelf.many .ware .card { --cw: 86px; --ch: 120px; }
+@media (max-width: 600px) {
+  .ware .card:not(.helper):not(.pack):not(.upg) { --cw: 72px; --ch: 101px; }
+  #sheet.pkwin .shelf.many .ware .card { --cw: 62px; --ch: 87px; }
+  #sheet.shopwin #shelf .ware { width: auto; flex: 1 1 0; }
+}
+@media (max-width: 400px) { .ware .card:not(.helper):not(.pack):not(.upg) { --cw: 66px; --ch: 92px; } }
+
+/* 菜谱：商店、包、结算页里也用灶台上方那种水牌，一眼就能认出是菜谱 */
+.ware .rule, .shelf .rule { animation: none; transform: none; margin-top: 16px; zoom: 1.25; pointer-events: none; }
+.ware .rule .x { display: none; }
+@media (max-width: 600px) { .ware .rule, .shelf .rule { zoom: 1.35; margin-top: 12px; } }
+@media (max-width: 400px) { .ware .rule, .shelf .rule { zoom: 1.25; } }
+
+/* 伙计：和小票上的伙计格子一样，深绿底、奶白图案 */
+.card.helper { --c: var(--cream); --t: rgba(252,248,239,.16); width: var(--cw); height: var(--ch); --cw: 96px; --ch: 134px; }
+.card.helper .cf { background: linear-gradient(#56704F, #3E5A3A); color: var(--cream); box-shadow: inset 0 -4px 0 #273C25, 0 6px 10px -6px rgba(0,0,0,.5); }
+.card.helper .hav { background: rgba(252,248,239,.16); color: var(--cream); border-radius: 12px; }
+.card.helper .hnm { color: var(--cream); }
+.card.helper .hds { color: #3E5A3A; background: var(--cream); }
+.hslot { background: linear-gradient(#56704F, #3E5A3A); color: var(--cream); box-shadow: inset 0 -3px 0 #273C25, 0 3px 0 rgba(0,0,0,.2); }
+#sheet.shopwin .blk.hl .hslot.empty { background: none; box-shadow: none; }
+@media (max-width: 600px) { .card.helper { --cw: 72px; --ch: 101px; } .card.helper .hav { width: 32px; height: 32px; padding: 6px; } }
+
+/* 灶台：去掉右上角槽位标识；提示字放在牌下方、火的上方，不和火重叠 */
+#warn { top: var(--ch); bottom: auto; height: calc(100% - var(--ch)); display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; }
+#warn .ic { width: 18px; height: 18px; vertical-align: 0; }
+@media (max-width: 900px) { #warn { bottom: auto; font-size: 15px; } #warn .ic { width: 15px; height: 15px; } }
+/* 商品：类型标签都在顶上一排，价格都在底下一排，中间的牌靠下对齐 */
+#sheet.shopwin #shelf { align-items: stretch; }
+#sheet.shopwin #shelf .ware, #sheet.pkwin .ware { justify-content: flex-end; }
+#sheet.shopwin #shelf .ware .kind { margin-bottom: auto; }
+.ware .sfx, .blk.green .ware .sfx { align-self: center; width: auto; border-radius: 9px; padding: 0 7px; white-space: nowrap; }
+#sheet.pkwin .shelf.pkopen { align-items: flex-end; }
+@media (min-width: 901px) and (max-height: 760px) { #pot { height: calc(var(--ch) + 28px); } #stove { padding-bottom: 30px; } #warn { font-size: 16px; } }
+
+/* ===== 商品：不要小字标签；下方是购买按钮；买完留空 ===== */
+.ware .buy { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 64px; height: 32px; padding: 0 12px; border-radius: 12px;
+  background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; font-size: 18px; box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 4px 0 var(--ember-d); transition: transform .1s, box-shadow .1s; }
+.ware .buy .ic { width: 17px; height: 17px; color: #6B3A10; }
+.ware:hover:not(:disabled) .buy { transform: translateY(-1px); }
+.ware:active:not(:disabled) .buy { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 1px 0 var(--ember-d); }
+.ware:disabled .buy, .ware .buy.no { background: rgba(43,36,32,.35); color: #FFB4A3; box-shadow: 0 3px 0 rgba(43,36,32,.35); }
+.ware:disabled .buy .ic { color: #FFB4A3; }
+.ware:disabled:not(.sold) { opacity: 1; }
+.ware:disabled .card, .ware:disabled .rule { filter: saturate(.6) brightness(.92); }
+.ware:hover:not(:disabled) { transform: translateY(-4px); }
+.ware .kind { display: none; }
+.ware.gone, .pkb.gone { visibility: hidden; pointer-events: none; }
+.pkb .buy { min-width: 0; height: 30px; padding: 0 10px; font-size: 16px; }
+.pkb:disabled { opacity: 1; } .pkb:disabled .pk-ic { filter: saturate(.5); }
+.pkb .buy { display: inline-flex; align-items: center; gap: 3px; border-radius: 10px; background: linear-gradient(#F59B5A, var(--ember)); color: #3A1A08; box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 3px 0 var(--ember-d); white-space: nowrap; }
+.pkb .buy .ic { width: 15px; height: 15px; color: #6B3A10; }
+.pkb:disabled .buy { background: rgba(43,36,32,.18); color: #B5432F; box-shadow: 0 2px 0 rgba(43,36,32,.2); } .pkb:disabled .buy .ic { color: #B5432F; }
+.no-flex-gap .ware .buy > * + *, .no-flex-gap .pkb .buy > * + * { margin-left: 3px; }
+#sheet.pkwin .legend { justify-content: center; margin-top: 6px; }
+@media (max-width: 600px) {
+  .ware .buy { min-width: 0; width: 100%; max-width: 72px; height: 28px; padding: 0 6px; font-size: 15px; border-radius: 10px; }
+  .ware .buy .ic { width: 14px; height: 14px; }
+  .pkb .buy { grid-column: 2; justify-self: start; height: 26px; font-size: 14px; padding: 0 8px; }
+}
+
+/* ===== 小票：出牌/弃牌次数、铜钱、伙计放在同一行；利息只在结账时显示 ===== */
+.t-bar { display: flex; flex-direction: column; gap: 12px; }
+.no-flex-gap .t-bar > * + * { margin-top: 12px; }
+#helpers .hchip { flex: none; }
+@media (max-width: 900px) {
+  .t-bar { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; }
+  .no-flex-gap .t-bar > * + * { margin-top: 0; margin-left: 10px; }
+  .t-bar .t-counts { flex: 1 1 auto; min-width: 0; }
+  .t-bar .t-coins { flex: none; }
+  .t-bar #helpers { flex: none; }
+}
+@media (max-width: 600px) {
+  .t-bar { gap: 8px; } .no-flex-gap .t-bar > * + * { margin-left: 8px; }
+  .t-bar .t-counts { grid-gap: 6px; gap: 6px; }
+  .t-bar .t-coins { gap: 4px; } #coins { font-size: 20px; } #coinIco { width: 18px; height: 18px; }
+  #helpers { gap: 4px; } .no-flex-gap #helpers > * + * { margin-left: 4px; }
+  #helpers .hchip { width: 28px; height: 28px; padding: 5px; border-radius: 8px; }
+}
+@media (max-width: 360px) { #helpers .hchip { width: 24px; height: 24px; padding: 4px; } .cnt span { font-size: 10px; } }
+
+/* ===== 出牌、弃牌按钮缩小 ===== */
+#board { grid-template-columns: 84px minmax(0, 1fr) 112px; }
+#acts { grid-template-rows: 56px 40px; grid-gap: 8px 6px; gap: 8px 6px; grid-template-columns: 1fr 38px; }
+.act.play { font-size: 18px; border-radius: 14px; } .act.play .ico { width: 22px; height: 22px; }
+.act.disc { font-size: 15px; border-radius: 12px; } .act.disc .ico, .act.sort .ico { width: 18px; height: 18px; }
+.act.sort { border-radius: 12px; }
+@media (min-width: 901px) and (max-height: 760px) { #acts { grid-template-rows: 50px 36px; } }
+@media (max-width: 900px) {
+  #acts { width: 200px; grid-template-columns: 1fr 1fr 40px; grid-template-rows: 46px; }
+  #board { grid-template-columns: 1fr auto; }
+}
+@media (max-width: 600px) {
+  #board { grid-template-columns: auto minmax(0, 1fr); }
+  #acts { width: auto; justify-self: end; grid-template-columns: 96px 96px 40px; grid-template-rows: 44px; grid-gap: 6px; gap: 6px; }
+  .act, .act.play, .act.disc { font-size: 15px; border-radius: 12px; gap: 4px; }
+  .act .ico, .act.disc .ico, .act.sort .ico { width: 17px; height: 17px; }
+}
+@media (max-width: 600px) and (min-height: 800px) { #acts { grid-template-rows: 48px; grid-template-columns: 104px 104px 44px; } }
+@media (max-width: 600px) and (max-height: 760px) { #acts { grid-template-rows: 40px; } }
+@media (max-width: 360px) { #acts { grid-template-columns: 82px 82px 36px; } }
+/* 电脑端：次数一行，铜钱和伙计同一行 */
+@media (min-width: 901px) {
+  .t-bar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px 8px; }
+  .no-flex-gap .t-bar > * + * { margin-top: 0; }
+  .t-bar .t-counts { flex: 1 1 100%; }
+  .t-bar .t-coins { flex: 1 1 auto; gap: 6px; } #coins { font-size: 28px; } #coinIco { width: 24px; height: 24px; }
+  .t-bar #helpers { flex: none; gap: 4px; } #helpers .hchip { width: 30px; height: 30px; padding: 5px; border-radius: 8px; }
+}
+
+/* ===== 商品：点牌看效果，点下方按钮才买 ===== */
+.ware { cursor: default; }
+.ware-art { display: block; cursor: pointer; }
+.ware:hover { transform: none; }
+.ware-art:hover .card, .ware-art:hover .rule { transform: translateY(-3px); }
+.ware .card, .ware .rule { transition: transform .15s, filter .2s; }
+.ware.off .card, .ware.off .rule { filter: saturate(.6) brightness(.92); }
+.ware .buy { cursor: pointer; font: inherit; }
+.ware .buy:hover:not(:disabled) { transform: translateY(-1px); }
+.ware .buy:active:not(:disabled) { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 1px 0 var(--ember-d); }
+.ware .buy:disabled { background: rgba(43,36,32,.35); color: #FFB4A3; box-shadow: 0 3px 0 rgba(43,36,32,.35); cursor: default; }
+.ware .buy:disabled .ic { color: #FFB4A3; }
+.ware .buy.take { font-size: 15px; }
+.pkb { cursor: pointer; }
+.pkb.off .pk-ic { filter: saturate(.5); }
+.pkb .buy { cursor: pointer; font: inherit; }
+.pkb .buy:disabled { background: rgba(43,36,32,.18); color: #B5432F; box-shadow: 0 2px 0 rgba(43,36,32,.2); cursor: default; } .pkb .buy:disabled .ic { color: #B5432F; }
+.pkb:hover { transform: none; box-shadow: 0 4px 0 rgba(0,0,0,.16); }
+.pkb .buy:active:not(:disabled) { transform: translateY(2px); }
+#sheet.pkwin .ware { gap: 8px; }
+#sheet.shopwin #shelf .ware-art .card.helper { width: var(--cw); }
+#sheet.shopwin #shelf .ware { height: 100%; } #sheet.shopwin #shelf .ware .buy { margin-top: auto; } #sheet.shopwin #shelf .ware .ware-art { margin-top: auto; }
+@media (min-width: 901px) and (min-height: 700px) { #sheet.shopwin #shelf .ware-art .rule { zoom: 1; margin-top: 12px; } }
+
+/* ===== 符号说明 ===== */
+.fxp.g { background: var(--gold-d); }
+.help .sym h4 { margin: 10px 0 4px; font-size: 14px; font-weight: 400; color: var(--mute); }
+.help .sym .tags { grid-template-columns: 96px 1fr; }
+.help .sym .tags > span:nth-child(2n) { line-height: 1.45; }
+.help .sym .tags .fxp { margin: 0 1px; }
+.help .sym .sy { justify-self: start; font-size: 15px; color: var(--ink); background: var(--paper-d); border-radius: 6px; padding: 0 6px; }
+.help .pt-demo { justify-self: start; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--cream); background: var(--ing); font-size: 14px; }
+.help .dot-demo { justify-self: start; display: inline-flex; gap: 3px; } .help .dot-demo i { width: 7px; height: 7px; border-radius: 50%; background: var(--tech); }
+.help .ic-demo { justify-self: start; width: 20px; height: 20px; color: var(--ing); }
+.help .ban-demo { justify-self: start; width: 22px; height: 22px; color: var(--rec); }
+.help .sym .stp { justify-self: start; }
+.card.helper .hds { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; background: none; padding: 0; }
+.card.helper .hds .fxp { font-size: 13px; height: 22px; }
+@media (max-width: 600px) { .help .sym .tags { grid-template-columns: 78px 1fr; grid-gap: 6px 8px; gap: 6px 8px; font-size: 13px; } .card.helper .hds .fxp { font-size: 11px; height: 18px; padding: 0 5px; } }
+#fxtip .fxp { height: 20px; font-size: 13px; vertical-align: 1px; margin: 0 1px; }
+.no-flex-gap .card.helper .hds > * + * { margin-left: 3px; }
+
+/* ===== 开包窗口：按内容收紧，不再撑满固定大小 ===== */
+#sheet.pkwin { width: auto; max-width: min(92vw, 760px); height: auto; padding: 16px 18px 14px; overflow: hidden; }
+#sheet.pkwin h1 { font-size: 26px; }
+#sheet.pkwin .sub { font-size: 14px; margin-top: 2px; }
+#sheet.pkwin .shelf.pkopen { min-height: 0; margin-top: 10px; padding: 14px 14px 12px; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: flex-end; overflow: visible; }
+#sheet.pkwin .btns { margin-top: 10px; }
+#sheet.pkwin .btns .pill { height: 38px; font-size: 15px; }
+@media (max-width: 600px) {
+  #sheet.pkwin { width: auto; max-width: calc(100vw - 24px); padding: 12px 10px 10px; }
+  #sheet.pkwin h1 { font-size: 22px; }
+  #sheet.pkwin .shelf.pkopen { padding: 10px 8px; gap: 6px; }
+}
+
+/* ===== 商店菜谱：宽度固定，不随菜名长短变 ===== */
+#sheet.shopwin #shelf .ware-art .rule { width: 70px; flex: none; }
+@media (max-width: 900px) { #sheet.shopwin #shelf .ware-art .rule { width: 50px; } }
+
+/* ===== 去掉排序按钮：只剩出牌、弃牌 ===== */
+#acts { grid-template-columns: 1fr; }
+#acts .disc { grid-column: 1; }
+@media (max-width: 900px) { #acts { width: 200px; grid-template-columns: 1fr 1fr; } .act.play { grid-column: 1; } #acts .disc { grid-row: 1; grid-column: 2; } }
+@media (max-width: 600px) { #acts { width: auto; grid-template-columns: 112px 112px; } }
+@media (max-width: 600px) and (min-height: 800px) { #acts { grid-template-columns: 120px 120px; } }
+@media (max-width: 360px) { #acts { grid-template-columns: 96px 96px; } }
+
+/* ===== 小票：伙计固定留 3 格，出牌/弃牌次数格宽度固定 ===== */
+#helpers:empty { display: flex; }
+.hchip.empty { background: none; box-shadow: none; border: 1.5px dashed var(--paper-d); }
+@media (max-width: 900px) {
+  .t-bar .t-counts { flex: none; grid-template-columns: 78px 78px; }
+  .t-bar .t-coins { flex: 1 1 auto; min-width: 0; justify-content: center; }
+}
+@media (max-width: 600px) { .t-bar .t-counts { grid-template-columns: 68px 68px; } }
+@media (max-width: 360px) { .t-bar .t-counts { grid-template-columns: 56px 56px; } }
+

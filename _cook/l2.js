@@ -1,0 +1,103 @@
+// ===== 规则引擎（纯逻辑，可无头运行）=====
+function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function shuffle(a, r) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+const BASE_CAP = { stir: 2, mix: 2, steam: 3 };   // 炒、搅拌两份，蒸三份
+let UID = 1;
+const mk = (key, stamp) => ({ uid: UID++, key, def: CARD_DEFS[key], stamp: stamp || null });
+
+// 配对：手法加工它左边紧邻的原料（不越过别的手法）
+function pairUp(slots, caps) {
+  const dishes = [];
+  slots.forEach((c, i) => {
+    if (c.def.type !== 'tech') return;
+    const cap = caps[c.key] || BASE_CAP[c.key] || 1, ings = [];
+    for (let j = i - 1; j >= 0 && ings.length < cap; j--) { if (slots[j].def.type === 'tech') break; ings.unshift(slots[j]); }
+    dishes.push({ tech: c, ings });
+  });
+  return dishes;
+}
+
+// 评估一锅。ctx: { recipes, lv, equipped, slotCap, spices, disabled }
+// 返回逐项明细 steps（供动画逐步播放）与总分
+function evaluate(slots, ctx) {
+  const lv = ctx.lv || {}, own = new Set(ctx.recipes.filter(k => !(ctx.disabled || []).includes(k)));
+  const eq = ctx.equipped.map(k => CARD_DEFS[k]), spices = (ctx.spices || []).map(k => CARD_DEFS[k]);
+  const caps = {}; eq.forEach(d => { if (d.techDouble) caps[d.techDouble] = 2; });
+  let dishes = pairUp(slots, caps);
+  if (own.has('kaoniurou')) {           // 烤牛肉：烤加工到牛肉时可多配一份原料
+    const d2 = pairUp(slots, Object.assign({}, caps, { roast: (caps.roast || 1) + 1 }));
+    if (d2.some(d => d.tech.key === 'roast' && d.ings.some(c => c.key === 'beef'))) dishes = d2;
+  }
+  const ingCards = slots.filter(c => c.def.type === 'ing');
+  let tofuIsEgg = false;
+  const matches = (r, d) => r.tech === d.tech.key && r.ing.every(k => d.ings.some(c => c.key === k || (k === 'egg' && tofuIsEgg && c.key === 'tofu')));
+  const triggers = [];
+  const ordered = RECIPES.filter(r => own.has(r.key)).sort((a, b) => a.phase - b.phase);
+  ordered.forEach(r => {
+    let n = dishes.filter(d => matches(r, d)).length;
+    if (r.once) n = Math.min(n, 1);
+    if (n) { const ds = dishes.filter(d => matches(r, d)).slice(0, n); triggers.push({ r, n, f: fxOf(r, lv[r.key] || 1), dish: ds[0], ds }); if (r.fx.convert) tofuIsEgg = true; }
+  });
+  const sp = k => spices.reduce((s, d) => s + (d.fx[k] || 0), 0);
+  const techX = spices.reduce((m, d) => m * (d.fx.techX || 1), 1), vegX = spices.reduce((m, d) => m * (d.fx.vegX || 1), 1);
+  // 基础分：每张牌一步
+  const steps = [], cardScore = {}; let base = 0, stampMult = 0, gold = 0;
+  slots.forEach(c => {
+    let v = c.def.base;
+    if (c.def.type === 'tech') {
+      const d = dishes.find(x => x.tech.uid === c.uid);
+      eq.forEach(e => { if (e.techBonus && e.techBonus[0] === c.key) v += e.techBonus[1]; });
+      v *= d.ings.length * techX;
+    } else if (c.def.veg) v *= vegX;
+    if (c.stamp === 'fresh') v += 3;
+    const sm = c.stamp === 'aroma' ? 0.5 : 0;
+    cardScore[c.uid] = v; base += v; stampMult += sm; if (c.stamp === 'gold') gold++;
+    steps.push({ kind: 'card', uid: c.uid, add: v, mult: sm });
+  });
+  let add = 0, mult = 1 + stampMult; const after = { slot: 0, draw: 0, swap: 0 }, lines = [];
+  const kinds = new Set(ingCards.map(c => c.key)).size;
+  const techCards = slots.filter(c => c.def.type === 'tech' && cardScore[c.uid] > 0);
+  const techKinds = new Set(techCards.map(c => c.key)).size;
+  const empty = Math.max(0, ctx.slotCap - slots.length);
+  triggers.forEach(({ r, n, f, dish, ds }) => {
+    let a = 0, m = 0;
+    if (f.add) a += f.add;
+    if (f.perIng) a += f.perIng * ingCards.length;
+    if (f.perKind) a += f.perKind * kinds;
+    if (f.perTech) a += f.perTech * techCards.length;
+    if (f.copyVeg) a += f.copyVeg * ingCards.filter(c => c.def.veg).reduce((s, c) => s + cardScore[c.uid], 0);
+    if (f.mult) m += f.mult;
+    if (f.multEmpty) m += f.multEmpty * empty;
+    if (f.multTechKind) m += f.multTechKind * techKinds;
+    a *= n; m = +(m * n).toFixed(2); add += a; mult += m;
+    ['slot', 'draw', 'swap'].forEach(k => { if (f[k]) after[k] += f[k] * n; });
+    const txt = a && m ? `+${a} 倍+${m}` : a ? `+${a}` : m ? `倍+${m}` : fxShort(f);
+    lines.push({ key: r.key, name: r.name, n, txt, phase: r.phase, a, m, uids: [].concat.apply([], (ds || []).map(d => [d.tech.uid].concat(d.ings.map(c => c.uid)))) });
+    steps.push({ kind: 'recipe', key: r.key, add: a, mult: m, txt });
+  });
+  // 帮厨伙计：菜谱之后、调料之前
+  (ctx.helpers || []).forEach(key => {
+    const f = HELPER_BY[key].fx; let a = 0, m = 0;
+    if (f.perKey) a = f.perKey[1] * ingCards.filter(c => c.key === f.perKey[0] || (f.perKey[0] === 'egg' && tofuIsEgg && c.key === 'tofu')).length;
+    if (f.perVeg) a = f.perVeg * ingCards.filter(c => c.def.veg).length;
+    if (f.perTechKey) a = f.perTechKey[1] * techCards.filter(c => c.key === f.perTechKey[0]).length;
+    if (f.perRecipe) a = f.perRecipe * lines.length;
+    if (f.meatMult && ingCards.some(c => c.def.meat)) m = f.meatMult;
+    if (f.techMult && techCards.some(c => c.key === f.techMult[0])) m = f.techMult[1];
+    if (f.bigMult && slots.length >= f.bigMult[0]) m = f.bigMult[1];
+    if (a || m) { add += a; mult += m; steps.push({ kind: 'helper', key, add: a, mult: m }); }
+  });
+  // 调料：最后结算
+  (ctx.spices || []).forEach(key => { const d = CARD_DEFS[key];
+    let a = 0, m = 0;
+    if (d.fx.perIng) a = d.fx.perIng * ingCards.length;
+    if (d.fx.mult) m = d.fx.mult;
+    if (d.fx.multPerRecipe) m = d.fx.multPerRecipe * lines.length;
+    add += a; mult += m;
+    if (a || m || d.fx.techX || d.fx.vegX) steps.push({ kind: 'spice', key, add: a, mult: m, txt: a ? `+${a}` : m ? `倍+${+m.toFixed(2)}` : d.short });
+  });
+  mult = +mult.toFixed(2);
+  const total = ingCards.length ? Math.round((base + add) * mult) : 0;
+  return { dishes, cardScore, base, add, mult, total, lines, steps, after, gold, valid: ingCards.length > 0 };
+}

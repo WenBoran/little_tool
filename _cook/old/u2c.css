@@ -1,0 +1,60 @@
+/* 弹层：结算 / 菜摊 / 收摊 */
+#veil { position: fixed; inset: 0; background: rgba(43,37,34,.62); display: grid; place-items: center; z-index: 80; backdrop-filter: blur(2px); }
+#veil[hidden] { display: none; }
+#sheet { background: var(--cream); border-radius: 20px; padding: 26px 30px 26px; width: min(680px, 94vw); max-height: 94vh; overflow: auto; text-align: center;
+  box-shadow: 0 0 0 6px rgba(251,246,236,.25), 0 24px 50px -20px rgba(0,0,0,.7); animation: rise .3s; }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+#sheet h1 { font-size: 38px; line-height: 1.2; margin: 0; }
+#sheet .big { font-size: 58px; line-height: 1; margin: 6px 0 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#sheet .big small { font-size: 24px; color: var(--mute); margin-left: 6px; font-weight: 400; }
+#sheet .gain { display: inline-flex; align-items: center; gap: 4px; font-size: 22px; font-weight: 600; color: #9A7631; margin: 6px 0 4px; }
+#sheet .gain .ic { width: 22px; height: 22px; color: var(--gold); }
+#sheet .row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 20px 0 16px; padding: 16px 10px 8px; border-radius: 14px;
+  background: linear-gradient(var(--wood-l), var(--wood)); box-shadow: inset 0 2px 6px rgba(0,0,0,.25); }
+#sheet .btns { display: flex; gap: 14px; justify-content: center; align-items: center; }
+#sheet .goal { display: inline-flex; align-items: center; gap: 6px; color: var(--mute); font-size: 17px; margin-top: 10px; }
+#sheet .goal .ic { width: 18px; height: 18px; color: var(--gold); }
+.pill { height: 50px; padding: 0 28px; border-radius: 14px; background: var(--ember); color: var(--ink); font-size: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 0 #9C5427; }
+.pill .ic { width: 20px; height: 20px; stroke-width: 2.4; }
+.pill.o { background: var(--face-d); box-shadow: 0 4px 0 #C9B99C; padding: 0 16px; font-size: 17px; }
+.pill:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.pill:disabled { opacity: .45; cursor: default; }
+.ware { width: 140px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px; transition: transform .18s; color: var(--cream); }
+.ware:hover:not(:disabled) { transform: translateY(-6px); }
+.ware:disabled { opacity: .45; cursor: default; }
+.ware .card { pointer-events: none; }
+.ware .price { display: inline-flex; align-items: center; gap: 3px; font-size: 20px; font-weight: 600; text-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.ware .price .ic { width: 18px; height: 18px; color: var(--gold); }
+.ware .own { font: 600 11px var(--sans); height: 14px; opacity: .8; }
+/* 菜谱商品：一块水牌 */
+.card.recipe { --c: var(--rec); --t: var(--rec-t); width: 122px; background: linear-gradient(#F3E6CC, #E7D5B3); }
+.card.recipe .combo { position: absolute; left: 0; right: 0; top: 44px; display: flex; justify-content: center; align-items: center; gap: 1px; z-index: 1; }
+.card.recipe .combo .ic { width: 32px; height: 32px; }
+.card.recipe .combo .i { color: var(--ing); } .card.recipe .combo .t { color: var(--tech); }
+.card.recipe .combo span { color: var(--mute); font-size: 16px; }
+.card.recipe .eff { position: absolute; left: 6px; right: 6px; bottom: 14px; text-align: center; font-size: 18px; font-weight: 600; color: var(--rec); z-index: 1; }
+/* 说明页 */
+.howto { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 22px 0; text-align: center; font-size: 17px; line-height: 1.5; }
+.howto .demo { height: 70px; display: flex; justify-content: center; align-items: center; gap: 4px; margin-bottom: 6px; }
+.howto .demo > span { display: inline-block; width: 38px; height: 38px; }
+.howto .i { color: var(--ing); } .howto .t { color: var(--tech); } .howto .r { color: var(--rec); } .howto .e { color: var(--equip); }
+.howto .demo b { font-size: 24px; }
+.howto .demo em { font-style: normal; color: var(--mute); }
+.howto .demo .k { width: auto; height: auto; padding: 4px 10px; border-radius: 8px; font-size: 16px; font-weight: 600; }
+.howto .demo .k.p { background: var(--ember); } .howto .demo .k.d { background: var(--equip); color: var(--cream); }
+
+@media (max-width: 820px) {
+  :root { --cw: 82px; --ch: 116px; }
+  #app { padding: 10px 10px 12px; gap: 10px; }
+  #hud { grid-template-columns: auto 1fr auto; gap: 10px; } #score { min-width: 0; }
+  #num b { font-size: 38px; } #lvname { font-size: 20px; } #purse { font-size: 22px; } .qm { margin-left: 6px; }
+  #stove { padding: 12px 12px 52px; min-height: 0; } #pot { margin-top: 30px; height: calc(var(--ch) + 16px); }
+  #rail { min-height: 104px; } .rule { width: 54px; min-height: 100px; } .rule .rn { font-size: 15px; } .rule .rc .ic { width: 16px; height: 16px; }
+  #hand { height: calc(var(--ch) + 40px); } .pile { width: 48px; height: 66px; } .pile.dis { width: 38px; height: 52px; } #piles { padding-bottom: 0; }
+  .card .art { width: 50px; height: 50px; margin: -25px 0 0 -25px; } .card .nm { font-size: 18px; } .card .pt { width: 24px; height: 24px; line-height: 24px; font-size: 13px; }
+  #board { grid-template-columns: 1fr 1fr; grid-template-areas: "hand hand" "piles acts"; }
+  #hand { grid-area: hand; } #piles { grid-area: piles; flex-direction: row; justify-content: flex-start; } #acts { grid-area: acts; flex-direction: row; }
+  .act { flex: 1; height: 54px; font-size: 18px; grid-template-columns: 26px 1fr; padding: 0 8px; } .act .ico { width: 24px; height: 24px; }
+  .howto { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
