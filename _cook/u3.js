@@ -14,12 +14,20 @@ function capOf(c, equipped) {
   if (eq.some(d => d.techDouble === c.key)) n = Math.max(n, 2);
   return n;
 }
+// ===== 卡片说明（点一下弹出的浮框）统一格式 =====
+// { t 名字, k 类型, lv 等级, b [正常描述], fx [[颜色, 标签, 这个标签是什么意思]], n [备注] }
+// 显示成：标题行（名字 + 右侧灰色类型）→ 正常描述 → 虚线下每行「标签 + 小号灰字解释」→ 最小号备注
+const tipAttr = o => JSON.stringify(o).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+const pairTags = (tags, desc) => { const ls = String(desc || '').split('\n'); return (tags || []).map(([k, t], i) => [k, t, ls[Math.min(i, ls.length - 1)]]); };
+const stampRow = s => { const st = STAMPS[s]; return ['s' + st.cls, st.name, `「${st.name}」印记：${st.desc}`]; };   // k 以 s 开头 = 印记方块
 function cardTip(c) {
-  const d = c.def;
-  if (d.type === 'equip' || d.type === 'spice') return `${d.name}　${tagLine(d.tag)}\n${d.desc.replace('\n', '，')}`;
-  if (d.type === 'tech') return `${d.name}：${d.base} 分 × 加工份数，可加工左边 ${capOf(c)} 份原料`;
-  return `${d.name}：${d.base} 分${d.veg ? '，蔬菜' : ''}${d.meat ? '，荤' : ''}`;
+  const d = c.def, o = { t: d.name, k: TYPE_NAME[d.type], b: [], fx: [] };
+  if (d.tag) o.fx = pairTags(d.tag, d.desc);
+  if (c.stamp) o.fx.push(stampRow(c.stamp));
+  return o;
 }
+const helperTip = (k, note) => { const h = HELPER_BY[k]; return { t: h.name, k: '伙计', b: [], fx: pairTags(h.tag, h.desc), n: note ? [note] : [] }; };
+const recipeTip = (r, lv, note) => ({ t: r.name, k: '菜谱', lv: lv > 1 ? lv : 0, b: [], fx: fxParts(fxOf(r, lv)).map(x => [x.k, x.t, x.l]), n: note ? [note] : [] });
 // 卡面：所有地方（手牌、灶台、牌组、商店、包）同一个样子。
 // 左边一列：分数、加工份数/荤素标记、竖排牌名（牌压叠时也露得出来）；右边：图案；左下：印记
 function cardInner(c) {
@@ -29,15 +37,14 @@ function cardInner(c) {
   else pt = `<span class="pt">${icon('spark')}</span>`;
   if (d.type === 'tech') mk = '<i></i>'.repeat(capOf(c));
   if (d.type === 'ing' && (d.veg || d.meat)) mk = `<span class="lf">${icon(d.veg ? 'leaf' : 'meat')}</span>`;
-  return `<div class="cf"><div class="idx">${pt}${mk ? `<span class="mk">${mk}</span>` : ''}<span class="vn${d.name.length > 2 ? ' l' : ''}">${d.name}</span></div>
+  const tg = (d.type === 'equip' || d.type === 'spice') && d.tag ? `<div class="tgs">${d.tag.map(([k, t]) => `<span class="fxp ${k}">${t}</span>`).join('')}</div>` : '';
+  return `<div class="cf${tg ? ' has-tg' : ''}">${tg}<div class="idx">${pt}${mk ? `<span class="mk">${mk}</span>` : ''}<span class="vn${d.name.length > 2 ? ' l' : ''}">${d.name}</span></div>
     <div class="plate"><div class="art">${icon(c.key)}</div></div>${c.stamp ? `<span class="stp ${STAMPS[c.stamp].cls}">${STAMPS[c.stamp].name}</span>` : ''}</div>`;
 }
 function cardEl(c, extra = '') {
   const el = document.createElement('div');
   el.className = `card ${c.def.type} ${extra}`; el.dataset.uid = c.uid;
-  const d = c.def, st = c.stamp && STAMPS[c.stamp];
-  const fx = [d.tag && `${d.name}　${tagLine(d.tag)}\n${d.desc.replace('\n', '，')}`, st && `印记「${st.name}」${tagLine(st.tag)}　${st.desc}`].filter(Boolean).join('\n');
-  if (fx) el.dataset.fx = fx;   // 装备和调料的特殊效果，悬停时在浮框里显示
+  if (c.def.tag || c.stamp) el.dataset.fx = JSON.stringify(cardTip(c));   // 装备、调料、带印记的牌：点一下看说明
   el.innerHTML = cardInner(c);
   return el;
 }
@@ -45,13 +52,17 @@ function cardEl(c, extra = '') {
 function ruleTag(r, lvl = 1) {
   const f = fxOf(r, lvl);
   const el = document.createElement('div'); el.className = 'rule'; el.dataset.key = r.key;
-  el.innerHTML = `<div class="rc">${r.ing.map(k => `<span class="ic i">${icon(k)}</span>`).join('')}<span class="ic t">${icon(r.tech)}</span></div>
-    <div class="rn${r.name.length > 3 ? ' l' : ''}">${r.name}</div><div class="eq">${fxPills(f)}</div>${lvl > 1 ? `<span class="lv">${lvl}</span>` : ''}<span class="x"></span>`;
+  const n = r.ing.length + 1;   // 图标多于 3 个（三样原料 + 手法）就排成两行
+  const brk = t => t.replace(/\//g, '<wbr>/').replace(/ /g, '<wbr> ');   // 长标签在「/」和空格处可以折行
+  el.innerHTML = `<div class="rc${n > 3 ? ' n4' : n === 3 ? ' n3' : ''}">${r.ing.map(k => `<span class="ic i">${icon(k)}</span>`).join('')}<span class="ic t">${icon(r.tech)}</span></div>
+    <div class="rn${r.name.length > 3 ? ' l' : ''}">${r.name}</div><div class="eq">${fxParts(f).map(x => `<span class="fxp ${x.k}">${brk(x.t)}</span>`).join('')}</div>${lvl > 1 ? `<span class="lv">${lvl}</span>` : ''}<span class="x"></span>`;
   return el;
 }
 function ruleEl(r) {
   const lv = G.lv[r.key] || 1, el = ruleTag(r, lv);
-  el.dataset.fx = `${r.name}${lv > 1 ? ' Lv' + lv : ''}　${tagLine(fxTags(fxOf(r, lv)))}\n${recipeCond(r)}\n${fxText(fxOf(r, lv))}`;
+  const m = G.mast[r.key] || 0, nx = mastNext(G, r.key);
+  el.dataset.fx = JSON.stringify(recipeTip(r, lv, nx ? `${m}/${nx} 免费升级` : '已练满'));
+  el.insertAdjacentHTML('beforeend', '<i class="mp"></i>');
   el.tabIndex = 0; el.setAttribute('role', 'button');
   return el;
 }
@@ -93,7 +104,7 @@ function renderTicket(p) {
   const boss = BOSS_BY[G.bossKey];
   $('#pips').innerHTML = CFG.rounds.map((_, i) => {
     const last = i === CFG.rounds.length - 1, cls = (i < G.round ? 'done ' : i === G.round ? 'now ' : '') + (last ? 'boss' : '');
-    return `<i class="${cls}">${i < G.round ? icon('check') : last ? icon(boss.icon) : ''}</i>`;
+    return `<i class="${cls}"${last ? ` data-fx="${tipAttr({ t: boss.name, k: '挑剔食客', b: [boss.rule], n: ['这关最后一回合出现'] })}"` : ''}>${i < G.round ? icon('check') : last ? icon(boss.icon) : ''}</i>`;
   }).join('');
   $('#bossTag').innerHTML = G.boss ? `<div class="bosschip"><span class="av">${icon(G.boss.icon)}</span><div><b>${G.boss.name}</b><span>${G.boss.rule}</span></div></div>` : '';
   $('#tgt').textContent = G.target;
@@ -114,16 +125,27 @@ function renderTicket(p) {
   $('#nPlay').textContent = G.playsLeft; $('#nDisc').textContent = G.discardsLeft;
   $('#coinIco').innerHTML = icon('coin');
   $('#coins').textContent = anim ? shown.coins : G.coins;
-  $('#helpers').innerHTML = Array.from({ length: CFG.maxHelpers }, (_, i) => G.helpers[i]).map(k => !k ? '<span class="hchip empty"></span>' : `<span class="hchip" data-k="${k}" data-fx="${HELPER_BY[k].name}　${tagLine(HELPER_BY[k].tag)}\n${HELPER_BY[k].desc}">${icon(HELPER_BY[k].icon)}</span>`).join('');
+  $('#helpers').innerHTML = Array.from({ length: CFG.maxHelpers }, (_, i) => G.helpers[i]).map(k => !k ? '<span class="hchip empty"></span>' : `<span class="hchip" data-k="${k}" data-fx="${tipAttr(helperTip(k))}">${icon(HELPER_BY[k].icon)}</span>`).join('');
+}
+// 熟练度：水牌底部一条金色进度条，上面写「用了几次 / 升级要几次」；练满写「精通」。涨的时候条会跳一下
+let mastSeen = {};
+function paintMastery(el, k) {
+  const m = G.mast[k] || 0, nx = mastNext(G, k);
+  const bar = el.querySelector('.mp'); if (!bar) return;
+  el.classList.toggle('maxed', !nx);
+  bar.innerHTML = `<b style="width:${nx ? m / nx * 100 : 100}%"></b><span>${nx ? `${m}/${nx}` : '精通'}</span>`;
+  if (mastSeen[k] != null && m > mastSeen[k]) { bar.classList.remove('up'); void bar.offsetWidth; bar.classList.add('up'); }
+  mastSeen[k] = m;
 }
 function renderRules(ev) {
   const box = $('#rules'), have = new Map([...box.children].map(e => [e.dataset.key, e]));
   const keys = G.recipes;
   keys.forEach((k, i) => {
     let el = have.get(k);
-    const sig = k + (G.lv[k] || 1);
+    const sig = k + (G.lv[k] || 1) + '/' + (G.mast[k] || 0);
     if (!el || el.dataset.sig !== sig) { const n = ruleEl(RECIPE_BY[k]); n.dataset.sig = sig; if (el) el.replaceWith(n); else box.appendChild(n); el = n; }
     have.delete(k);
+    paintMastery(el, k);
     const hit = ev && ev.lines.find(l => l.key === k);
     el.classList.toggle('on', !!hit);
     el.querySelector('.x').textContent = hit ? (hit.n > 1 ? '×' + hit.n : '✔') : '';

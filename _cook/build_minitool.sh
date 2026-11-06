@@ -6,10 +6,10 @@ python3 - <<'PY'
 import io, os, shutil, zipfile
 from fontTools import subset
 from fontTools.ttLib import TTFont
-CSS = ['c1.css', 'c2.css', 'c3.css', 'c4.css', 'c5.css', 'c6.css', 'c7.css']
+CSS = ['c1.css', 'c2.css', 'c3.css', 'c4.css', 'c5.css', 'c6.css', 'c7.css', 'c8.css']
 JS = ['u_env.js', 'l1.js', 'l2.js', 'l3.js', 'u0.js', 'u3.js', 'u4.js', 'u5.js', 'u6.js', 'u7.js', 'u8.js', 'u9.js']
 out = '../minitool/dist'
-shutil.rmtree(out, ignore_errors=True); os.makedirs(out + '/assets/fonts')
+shutil.rmtree(out, ignore_errors=True); os.makedirs(out + '/assets/fonts', exist_ok=True)
 css = ''.join(open(f).read() + '\n' for f in CSS)
 js = ''.join(open(f).read() + '\n' for f in JS)
 html = open('u1.html').read()
@@ -22,12 +22,12 @@ sub('font/Fredoka.ttf', ''.join(chr(c) for c in range(32, 127)) + '×→…', ou
 font = ("@font-face { font-family: 'KuaiLe'; src: url(./fonts/kuaile.woff2) format('woff2'); font-display: block; }\n"
         "@font-face { font-family: 'Fred'; src: url(./fonts/fredoka.woff2) format('woff2'); font-display: block; }\n")
 open(out + '/assets/style.css', 'w').write(font + css)
-open(out + '/assets/main.js', 'w').write('/* 小灶：料理卡牌肉鸽（源码见 _cook/*.js，按依赖顺序拼接）*/\n' + js)
+open(out + '/assets/main.js', 'w').write('/* 一手好菜：料理卡牌肉鸽（源码见 _cook/*.js，按依赖顺序拼接）*/\n' + js)
 page = html.replace('<style id="font"></style>\n', '').replace('<style id="css2"></style>', '<link rel="stylesheet" href="./assets/style.css">')
 page += '<script src="./assets/main.js"></script>\n</body>\n</html>\n'
 open(out + '/index.html', 'w').write(page)
 z = '../minitool/xiaozao-minitool.zip'
-if os.path.exists(z): os.remove(z)
+# 'w' 模式会直接覆盖旧 zip
 with zipfile.ZipFile(z, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
     for root, _, files in os.walk(out):
         for fn in sorted(files):

@@ -513,3 +513,10 @@ body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
 }
 @media (max-width: 600px) { .t-bar .t-counts { grid-template-columns: 68px 68px; } }
 @media (max-width: 360px) { .t-bar .t-counts { grid-template-columns: 56px 56px; } }
+
+/* ===== 熟练度进度条：水牌底边 ===== */
+.rule .mp { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 4px; border-radius: 2px; background: rgba(120,80,30,.18); overflow: hidden; pointer-events: none; }
+.rule .mp b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 2px; background: var(--gold); transition: width .4s; }
+.rule.maxed .mp b { background: var(--gold-d); }
+.ware .rule .mp, .shelf .rule .mp { display: none; }
+@media (max-width: 600px) { .rule .mp { left: 4px; right: 4px; bottom: 2px; height: 3px; } }

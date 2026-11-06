@@ -1,4 +1,16 @@
 // ===== 出牌：逐步计分动画 =====
+// 出锅后一张牌的去向，写在牌上方冒出来的字
+function fateWord(f) {
+  if (f.key !== f.c.key) return '→' + CARD_DEFS[f.key].name;
+  if ((f.stamp || null) !== (f.c.stamp || null)) return f.stamp ? `盖「${STAMPS[f.stamp].name}」` : '变 2 张';
+  return '留下';
+}
+// 短写法：灶台小牌子和出锅冒字共用（牌压叠时只露左边一条，字要短）
+function fateShort(f) {
+  if (f.key !== f.c.key) return '→' + CARD_DEFS[f.key].name.slice(-1);
+  if ((f.stamp || null) !== (f.c.stamp || null)) return f.stamp ? '+' + STAMPS[f.stamp].name : '×2';
+  return '留';
+}
 function setCalc(chip, mult) { $('#cChip').textContent = chip; $('#cMult').textContent = +(+mult).toFixed(2); $('#cChip').classList.remove('dim'); $('#cMult').classList.remove('dim'); }
 $('#playBtn').onclick = async () => {
   if (busy) return; const p = previewSel(G, sel); if (!p.playable) return;
@@ -11,8 +23,8 @@ $('#playBtn').onclick = async () => {
     el.style.visibility = 'hidden';
     return flyClone(el, to, { delay: i * 60, ms: 380, arc: 70, scale: tgt ? 1 : .4, fade: !tgt });
   });
-  tone(220, .12, 'sine', .05);
-  await Promise.all(flights);
+  sfx.whoosh();
+  await Promise.all(flights); sfx.sizzle(.6);
   document.querySelectorAll('#slots .card.ghost').forEach(e => e.classList.remove('ghost'));
   // 2. 逐张、逐条菜谱、逐个调料计分
   let chip = 0, mult = 1, i = 0;
@@ -28,9 +40,11 @@ $('#playBtn').onclick = async () => {
     } else {
       const el = s.kind === 'recipe' ? $(`.rule[data-key="${s.key}"]`) : s.kind === 'helper' ? $(`#helpers .hchip[data-k="${s.key}"]`) : $(`#spices .chipx[data-k="${s.key}"]`);
       if (el) { el.classList.remove('flash', 'hit'); void el.offsetWidth; el.classList.add(s.kind === 'recipe' ? 'flash' : 'hit'); }
-      if (s.add) { chip += s.add; popOn(el, '+' + s.add, 'c', 30); bump($('#cChip')); sfxStep(i++); }
+      if (s.kind === 'recipe' && !s.xm) sfx.ding(i);
+      if (s.add) { chip += s.add; popOn(el, '+' + s.add, 'c', 30); bump($('#cChip')); if (s.kind !== 'recipe') sfxStep(i); i++; }
       if (s.mult) { mult += s.mult; popOn(el, '倍 +' + s.mult, 'm', 60); bump($('#cMult')); sfxMult(); }
-      if (!s.add && !s.mult) popOn(el, s.txt, 'm', 40);
+      if (s.xm) { mult *= s.xm; popOn(el, '倍 ×' + s.xm, 'm', 60); bump($('#cMult')); sfx.xm(); }
+      else if (!s.add && !s.mult) popOn(el, s.txt, 'm', 40);
       setCalc(chip, mult);
       await wait(380);
     }
@@ -38,25 +52,45 @@ $('#playBtn').onclick = async () => {
   // 3. 出锅：大字、火星、震屏，分数滚到小票上
   const total = p.ev.total, sc = center($('#pot'));
   $('#calcTot').innerHTML = `= <b>${total}</b>`; bump($('#calcTot'));
-  if (p.ev.spoiled) { pop(sc.x, sc.y - 20, `${G.boss.name}不吃，0 分`, 'big'); sfxLose(); }
+  if (p.ev.spoiled) { pop(sc.x, sc.y - 20, `${G.boss.name}不吃，0 分`, 'big'); sfx.spoil(); }
   else { pop(sc.x, sc.y - 20, '+' + total, 'big g'); sparks(sc.x, sc.y, Math.min(40, 10 + total / 4)); }
   const huge = total >= G.target * .5 || total >= 60;
   if (huge) { $('#stove').classList.remove('shake'); void $('#stove').offsetWidth; $('#stove').classList.add('shake'); }
-  tone(huge ? 196 : 262, .25, 'sawtooth', .05);
+  if (!p.ev.spoiled) sfx.total(huge);
   const to = Math.min(G.target * 9, G.score + total);
   await Promise.all([
     tween(shown.score, to, 600, v => { shown.score = v; $('#got').textContent = v; $('#bar .got').style.width = Math.min(1, v / G.target) * 100 + '%'; }).then(() => bump($('#got'))),
-    wait(250).then(() => coinsTo($('#rules').querySelector('.rule.on') || $('#stove'), p.ev.lines.length + p.ev.gold)),
+    wait(250).then(() => coinsTo($('#rules').querySelector('.rule.on') || $('#stove'), (p.ev.trig || 0) + p.ev.gold)),
   ]);
-  if (p.ev.lines.length + p.ev.gold) popOn($('#coins'), `小费 +${p.ev.lines.length + p.ev.gold}`, 'g', -16);
-  // 4. 锅里的牌用掉了：化成热气消失；装备回弃牌堆
-  await Promise.all([...document.querySelectorAll('#slots .card')].map((el, k) => ani(el.querySelector('.cf'),
-    [{ transform: 'none', opacity: 1, filter: 'blur(0)' }, { transform: 'translateY(-50px) scale(.7)', opacity: 0, filter: 'blur(4px)' }],
-    { duration: REDUCED ? 1 : 420, delay: REDUCED ? 0 : k * 50, easing: 'ease-in', fill: 'forwards' })));
-  if (p.eqs.length) bump($('#dis'));
+  if ((p.ev.trig || 0) + p.ev.gold) popOn($('#coins'), `小费 +${(p.ev.trig || 0) + p.ev.gold}`, 'g', -16);
+  // 4. 锅里的牌用掉了：化成热气消失；回弃牌堆的飞到弃牌堆，回牌组的（可能变了样子）飞到牌堆；装备回弃牌堆
+  const fa = fatesOf(G, p), fate = new Map(fa.cards.map(f => [f.c.uid, f]));
+  p.sps.forEach(c => { const f = fate.get(c.uid); if (f && f.to !== 'gone') popOn($(`#spices .chipx[data-k="${c.key}"]`), fateShort(f), 'r', -6); });
+  let nPop = 0;
+  await Promise.all([...document.querySelectorAll('#slots .card')].map((el, k) => {
+    const f = fate.get(+el.dataset.uid);
+    if (!f || f.to === 'gone') return ani(el.querySelector('.cf'),
+      [{ transform: 'none', opacity: 1, filter: 'blur(0)' }, { transform: 'translateY(-50px) scale(.7)', opacity: 0, filter: 'blur(4px)' }],
+      { duration: REDUCED ? 1 : 420, delay: REDUCED ? 0 : k * 50, easing: 'ease-in', fill: 'forwards' });
+    const changed = f.key !== f.c.key || (f.stamp || null) !== (f.c.stamp || null);
+    if (changed) { el.innerHTML = cardInner({ key: f.key, def: CARD_DEFS[f.key], stamp: f.stamp }); el.className = `card ${CARD_DEFS[f.key].type}`; }
+    const r0 = rectOf(el); pop(r0.left + Math.min(r0.width / 2, 22), r0.top - 8 - (nPop++ % 2) * 22, fateShort(f), 'r'); if (nPop === 1) sfx.fate();   // 牌叠着时冒字上下错开
+    return wait(changed ? 520 : 260).then(() => { el.style.visibility = 'hidden'; return flyClone(el, rectOf($(f.to === 'dis' ? '#dis' : '#pile')), { delay: k * 50, ms: 380, scale: .45, arc: 40, rot: -20 }); });
+  }));
+  if (fa.cards.some(f => f.to === 'dis')) bump($('#dis'));
+  if (p.eqs.length || fa.cards.some(f => f.to === 'deck')) bump($('#pile'));
+  const more = fa.extra.map(x => CARD_DEFS[x.key].name).concat(fa.temp.map(x => CARD_DEFS[x.key].name));
+  if (fa.extra.length) popOn($('#pile'), `牌组 +${fa.extra.map(x => CARD_DEFS[x.key].name).join(' ')}`, 'r', -14);
+  if (fa.temp.length) popOn($('#dis'), `复制 ${fa.temp.length} 张`, 'r', -14);
+  if (more.length) await wait(300);
   playSel(G, uids); sel = []; anim = null; busy = false;
   const last = G.last; render();
   if (last && last.reshuffled) showShuffle();
+  if (last && last.mastered && last.mastered.length) {   // 熟练度到门槛：水牌响一下，冒出“熟练 升级”
+    last.mastered.forEach((k, i) => setTimeout(() => { const el = $(`.rule[data-key="${k}"]`); if (!el) return;
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); popOn(el, `免费升级 Lv${G.lv[k]}`, 'g', 0); sfx.level(); }, i * 300));
+    await wait(700);
+  }
   await afterTurn();
 };
 
@@ -66,7 +100,7 @@ $('#discBtn').onclick = async () => {
   busy = true; renderActs(previewSel(G, sel));
   const dis = rectOf($('#dis'));
   await Promise.all(sel.map((u, k) => { const el = $(`#hand .card[data-uid="${u}"]`); if (!el) return; el.style.visibility = 'hidden'; return flyClone(el, dis, { delay: k * 50, ms: 360, rot: -30 + k * 10, scale: .45, arc: 40 }); }));
-  tone(180, .1, 'square', .03); bump($('#dis'));
+  sfx.discard(); bump($('#dis'));
   discardSel(G, sel.slice()); sel = []; busy = false;
   const last = G.last; render();
   if (last && last.reshuffled) showShuffle();
@@ -74,28 +108,28 @@ $('#discBtn').onclick = async () => {
 };
 function showShuffle() {
   const pl = $('#pile'); pl.classList.remove('shuffle'); void pl.offsetWidth; pl.classList.add('shuffle');
-  popOn(pl, '洗牌', 'c', -10); tone(330, .2, 'sine', .04); tone(440, .2, 'sine', .03, .1);
+  popOn(pl, '洗牌', 'c', -10); sfx.shuffle();
 }
 
 // ===== 回合结束 =====
 async function afterTurn() {
   if (G.phase === 'shop') {
-    busy = true; sfxWin();
+    busy = true; Music.stinger(G.levelDone ? 'clear' : 'win');
     banner(G.boss ? '搞定！' : '达标！', G.boss ? `${G.boss.name} 很满意` : `${G.score} / ${G.target}`);
     sparks(innerWidth / 2, innerHeight * .42, 40);
-    await wait(1300); busy = false; showBill();
+    await wait(1300); busy = false; Music.scene('shop', .6); showBill();
   } else if (G.phase === 'over') {
-    busy = true; sfxLose(); banner('收摊', `${G.score} / ${G.target}`, true);
-    await wait(1400); busy = false; showOver();
+    busy = true; Music.stinger('lose'); banner('收摊', `${G.score} / ${G.target}`, true);
+    await wait(1400); busy = false; Music.scene('menu', 1.2); showOver();
   }
 }
-function sheet(html, cls = '') { if (typeof hideFx === 'function') hideFx(); const sh = $('#sheet'); sh.onclick = null; sh.className = cls; sh.innerHTML = html; sh.classList.toggle('wide', !!$('#sheet .shop')); $('#sheet').classList.toggle('deckwin', !!$('#sheet #dkList')); $('#veil').hidden = false; $('#sheet').scrollTop = 0; const b = $('#sheet .pill'); if (b) b.focus({ preventScroll: true }); }
-function closeSheet() { $('#veil').hidden = true; }
+function sheet(html, cls = '') { if (typeof hideFx === 'function') hideFx(); const sh = $('#sheet'); sh.onclick = null; sh.className = cls; sh.innerHTML = html; sh.classList.toggle('wide', !!$('#sheet .shop')); $('#sheet').classList.toggle('deckwin', !!$('#sheet #dkList')); $('#veil').hidden = false; Music.muffle(G && G.phase === 'play'); $('#sheet').scrollTop = 0; const b = $('#sheet .pill'); if (b) b.focus({ preventScroll: true }); }
+function closeSheet() { $('#veil').hidden = true; Music.muffle(false); }
 const BILL_NAME = { tips: ['bowl', '小费'], base: ['bell', '基础奖励'], plays: ['flame', '剩余出牌'], interest: ['coin', '利息'], boss: ['spark', '挑剔食客赏钱'], helper: ['hat', '账房先生'] };
 async function showBill() {
   const b = G.bill; shown.coins = G.coins - b.sum;
   const items = b.items;
-  sheet(`<h1>结账</h1><div class="sub">第 ${G.level} 关　第 ${G.round + 1} 回合　${G.cooks} 锅</div>
+  sheet(`<h1>结账</h1><div class="sub">第 ${G.level} 关　第 ${G.round + 1} 回合　出牌 ${G.cooks} 次</div>
     <div class="bill">${items.map((it, i) => `<div class="ln" style="animation-delay:${i * .22}s">${icon(BILL_NAME[it.k][0])}<span>${BILL_NAME[it.k][1]}</span><b>+${it.n}</b></div>`).join('')}
     <div class="ln tot" style="animation-delay:${items.length * .22}s"><span>进账</span><b id="billTot">+${b.sum}</b></div></div>
     <div class="btns"><span class="wallet">${icon('coin')}<b id="wallet">${shown.coins}</b></span><button class="pill" id="go">${icon('check')}确认</button></div>`);

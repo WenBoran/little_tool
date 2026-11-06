@@ -5,7 +5,7 @@ python3 - <<'PY'
 import base64, io, re
 from fontTools import subset
 from fontTools.ttLib import TTFont
-css = ''.join(open(f).read() for f in ['c1.css', 'c2.css', 'c3.css', 'c4.css', 'c5.css', 'c6.css', 'c7.css'])
+css = ''.join(open(f).read() for f in ['c1.css', 'c2.css', 'c3.css', 'c4.css', 'c5.css', 'c6.css', 'c7.css', 'c8.css'])
 html = open('u1.html').read()
 js = ''.join(open(f).read() + '\n' for f in ['u_env.js', 'l1.js', 'l2.js', 'l3.js', 'u0.js', 'u3.js', 'u4.js', 'u5.js', 'u6.js', 'u7.js', 'u8.js', 'u9.js'])
 chars = set(html + js + css) | set('0123456789+-×=/?!.%：，。、（）()「」…→ abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')

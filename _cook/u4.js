@@ -20,28 +20,52 @@ function renderStove(p) {
     if (banned(G, c)) el.classList.add('ban');
   });
   old.forEach(e => e.remove());
+  // 出锅后不会用掉的牌：右上角紫色小牌子（回 = 回弃牌堆或牌组，→ = 变成别的牌，鲜/香/金 = 盖印记）
+  const fa = p.playable && !anim ? fatesOf(G, p) : null, fm = new Map(fa ? fa.cards.map(f => [f.c.uid, f]) : []);
+  box.querySelectorAll('.card').forEach(el => {
+    const f = fm.get(+el.dataset.uid); let b = el.querySelector('.fate');
+    if (!f || f.to === 'gone') { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('b'); b.className = 'fate'; el.appendChild(b); }
+    b.textContent = fateShort(f);
+  });
   st.classList.toggle('hot', !!(p.playable && p.ev.valid && !p.ev.spoiled));
   st.classList.toggle('roar', !!(p.playable && p.ev.valid && p.ev.total >= (G.target - G.score)));
-  const W2 = { over: '槽位不够', ban: `${G.boss ? G.boss.rule : ''}，这锅不得分`, short: `${G.boss ? G.boss.rule : ''}`, noing: '缺原料' };
+  const W2 = { over: '槽位不够', ban: `${G.boss ? G.boss.rule : ''}`, short: `${G.boss ? G.boss.rule : ''}`, noing: '缺原料' };
   $('#warn').innerHTML = p.why ? `${p.why === 'ban' ? icon('ban') : ''}${W2[p.why]}` : '';
 }
+// 加工连线：原料底部 → 手法底部的弧线。位置按牌的目标位置（style.left）算，不读动画中途的位置，
+// 所以牌还在滑动时画出来的线也在最终位置上。跨得越远弧越深，同一份原料连好几个手法时不会叠在一起。
+// 触发了菜谱的线是亮橙色带光，没触发的是淡色虚线；只有新出现的线播放“画出来”的动画
+let linkKeys = new Set();
 function renderLinks(p) {
-  const svg = $('#links'); svg.innerHTML = '';
-  if (!p || p.why || !p.ev.valid) return;
-  const pot = rectOf($('#pot')), ev = p.ev;
-  const elOf = uid => $(`#slots .card[data-uid="${uid}"]`);
-  const pos = uid => { const el = elOf(uid); if (!el) return null; const r = rectOf(el); return { x: r.left - pot.left + r.width / 2, y: r.bottom - pot.top }; };
+  const svg = $('#links');
+  if (!p || p.why || !p.ev.valid) { svg.innerHTML = ''; linkKeys = new Set(); return; }
+  const ev = p.ev, box = $('#slots');
+  const elOf = uid => box.querySelector(`.card[data-uid="${uid}"]`);
+  const pos = uid => { const el = elOf(uid); if (!el) return null; const L = el.style.left ? parseFloat(el.style.left) : el.offsetLeft; return { x: L + el.offsetWidth / 2, y: el.offsetHeight }; };
+  const room = Math.max(14, $('#pot').offsetHeight - box.offsetHeight - 4);   // 牌下面能画弧的高度
   const hitUids = new Set([].concat.apply([], ev.lines.map(l => l.uids)));
-  const used = new Set(); let out = '';
+  const order = new Map(p.slots.map((c, i) => [c.uid, i]));
+  const used = new Set(), keys = new Set(); let back = '', front = '', dots = '';
   ev.dishes.forEach(d => {
     const t = pos(d.tech.uid); if (!t) return;
-    if (!d.ings.length) { out += `<path class="bad" d="M${t.x - 26} ${t.y + 12} H${t.x + 26}"/>`; return; }
-    const hit = hitUids.has(d.tech.uid);
-    d.ings.forEach(c => { used.add(c.uid); const q = pos(c.uid); if (q) out += `<path class="${hit ? 'hit' : ''}" d="M${q.x} ${q.y + 5} C${q.x} ${q.y + 26} ${t.x} ${t.y + 26} ${t.x} ${t.y + 5}"/>`; });
+    if (!d.ings.length) { back += `<path class="bad" d="M${t.x - 22} ${t.y + 10} H${t.x + 22}"/>`; return; }
+    const hit = ev.lines.some(l => l.uids.includes(d.tech.uid)), ti = order.get(d.tech.uid);
+    d.ings.forEach(c => {
+      used.add(c.uid); const q = pos(c.uid); if (!q) return;
+      const span = Math.abs(ti - order.get(c.uid)), dep = Math.min(room, 8 + span * 7);
+      const k = `${c.uid}-${d.tech.uid}`, isNew = !linkKeys.has(k); keys.add(k);
+      const dd = `M${q.x} ${q.y + 2} C${q.x} ${q.y + dep * 1.3} ${t.x} ${t.y + dep * 1.3} ${t.x} ${t.y + 2}`;
+      back += `<path class="sh" d="${dd}"/>`;
+      front += `<path class="${hit ? 'hit' : 'raw'}${isNew ? ' new' : ''}" pathLength="1" d="${dd}"/>`;
+      dots += `<circle class="${hit ? 'hit' : 'raw'}" cx="${q.x}" cy="${q.y + 2}" r="3"/>`;
+    });
+    dots += `<circle class="end ${hit ? 'hit' : 'raw'}" cx="${t.x}" cy="${t.y + 2}" r="5"/>`;
   });
+  linkKeys = keys;
   hitUids.forEach(u => { const el = elOf(u); if (el) el.classList.add('lit'); });
   p.slots.forEach(c => { if (c.def.type === 'ing' && !used.has(c.uid)) { const el = elOf(c.uid); if (el) el.classList.add('spare'); } });
-  svg.innerHTML = out;
+  svg.innerHTML = back + front + dots;
 }
 
 // 手牌：排序后排成扇形，中间高、两边低、越往外转得越多。
@@ -149,6 +173,7 @@ function render() {
   sel = sel.filter(u => G.hand.some(c => c.uid === u));
   const p = previewSel(G, sel);
   renderTicket(p); renderStove(p); renderHand(); renderActs(p); renderRules(p.why ? null : p.ev);
+  Music.heat(G.phase === 'play' && (G.playsLeft === 1 || G.score >= G.target * .7));
   requestAnimationFrame(() => renderLinks(p));
   return p;
 }
@@ -157,7 +182,7 @@ function render() {
 function toggle(uid) {
   if (busy || G.phase !== 'play') return;
   const c = G.hand.find(c => c.uid === uid);
-  if (c && banned(G, c) && !sel.includes(uid)) toast(`${G.boss.name}：${G.boss.rule}，打出去这锅不得分`);   // 只提醒，不拦着（可以选来弃掉）
+  if (c && banned(G, c) && !sel.includes(uid)) toast(`${G.boss.name}：${G.boss.rule}`);   // 可以选来弃掉，但不能打出
   const i = sel.indexOf(uid); if (i >= 0) sel.splice(i, 1); else sel.push(uid);
   sfxTick(i < 0);
   render();

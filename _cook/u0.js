@@ -45,6 +45,7 @@ const ICONS = {
   next: '<path d="M10 24h26M26 14l10 10-10 10"/>',
   toss: '<path d="M11 16h26l-2.5 24h-21z"/><path d="M8 16h32M19 16v-5h10v5M20 23v10M28 23v10"/>',
   again: '<path d="M38 24a14 14 0 1 1-4-10"/><path d="M35 6v9h-9"/>',
+  wine: '<path d="M19 6h10v5l3 5v24a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V16l3-5z"/><path d="M16 23h16v10H16z"/><path d="M19 9h10"/>',
 };
 const icon = (k, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[k] || ''}</svg>`;
 

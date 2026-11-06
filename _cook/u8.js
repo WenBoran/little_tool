@@ -14,7 +14,11 @@ function showFx(el) {
   clearTimeout(fxTimer); cancelAnimationFrame(fxFollow); fxEl = el;
   if (!el.isConnected) return hideFx();
   const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  fxTip.innerHTML = esc(el.dataset.fx).replace(/\[([cmrg])\|([^\]]+)\]/g, '<span class="fxp $1">$2</span>');
+  let o; try { o = JSON.parse(el.dataset.fx); } catch (e) { o = { b: [el.dataset.fx] }; }
+  fxTip.innerHTML = (o.t ? `<div class="tt"><b>${esc(o.t)}${o.lv ? ` <i>Lv${o.lv}</i>` : ''}</b>${o.k ? `<small>${esc(o.k)}</small>` : ''}</div>` : '')
+    + (o.b || []).map(t => `<div class="tb">${esc(t)}</div>`).join('')
+    + (o.fx && o.fx.length ? `<div class="tf">${o.fx.map(([k, t, d]) => `${k[0] === 's' ? `<span class="stp ${k[1]}">${esc(t)}</span>` : `<span class="fxp ${k}">${esc(t)}</span>`}<span class="td">${esc(d)}</span>`).join('')}</div>` : '')
+    + (o.n || []).filter(Boolean).map(t => `<div class="tn">${esc(t)}</div>`).join('');
   fxTip.style.visibility = 'hidden'; fxTip.hidden = false;   // 先隐形量尺寸
   placeFx();
   fxTip.style.visibility = ''; fxTip.classList.add('on');
@@ -75,11 +79,10 @@ function layoutFans() {
     cards.forEach((c, i) => { c.style.left = (xs[i] + sh) + 'px'; c.style.zIndex = i + 1; });
   });
 }
-const STAMP_LEGEND = () => `<div class="legend">${Object.values(STAMPS).map(s => `<span><span class="stp ${s.cls}">${s.name}</span>${s.desc}</span>`).join('')}</div>`;
 function deckSheet(o) {
   sheet(`<h1>牌组</h1>
     <div class="tabs">${o.tabs.map(t => `<button class="tab ${t.k === o.tab ? 'on' : ''}" data-t="${t.k}" ${t.off ? 'disabled' : ''}>${t.name}${t.n != null ? ` <b>${t.n}</b>` : ''}</button>`).join('')}</div>
-    <div class="sub" style="font-size:15px">${o.sub}</div>${STAMP_LEGEND()}
+    ${o.sub ? `<div class="sub" style="font-size:15px">${o.sub}</div>` : ''}
     <div class="pv" id="dkList"></div>
     <div class="btns"><button class="pill" id="go">${o.back}</button></div>`);
   document.querySelectorAll('#sheet .tabs .tab').forEach(b => b.onclick = () => o.onTab(b.dataset.t));
@@ -88,7 +91,7 @@ const deckEntries = () => G.deck.map((k, i) => ({ key: k, stamp: G.stamps[i], i 
 function showPiles(tab = 'pile') {
   if (busy || G.phase !== 'play') return;
   const lists = { pile: G.pile.map(c => ({ key: c.key, stamp: c.stamp })), dis: G.discard.map(c => ({ key: c.key, stamp: c.stamp })), deck: deckEntries() };
-  const SUB = { pile: '还没摸到的牌', dis: '这回合弃掉的牌和用过的装备', deck: '出过的牌会用掉，装备除外' };
+  const SUB = { pile: '还没摸到的牌', dis: '这回合弃掉的牌', deck: '' };
   deckSheet({ tab, sub: SUB[tab], back: `${icon('flame')}回到灶台`, onTab: showPiles,
     tabs: [{ k: 'pile', name: '牌堆', n: lists.pile.length }, { k: 'dis', name: '弃牌堆', n: lists.dis.length }, { k: 'deck', name: '整副牌组', n: lists.deck.length }] });
   $('#dkList').innerHTML = deckGrid(lists[tab]); layoutFans();
