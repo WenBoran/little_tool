@@ -17,7 +17,22 @@ function showOver() {
       <div class="ln" style="animation-delay:.6s">${icon('spark')}<span>喂饱挑剔食客</span><b style="color:var(--ink)">${G.bossesBeat}</b></div>
     </div>
     <h2>${icon('board')}攒下的菜谱</h2>
-    <div class="shelf">${G.recipes.map(k => ruleTag(RECIPE_BY[k], G.lv[k] || 1).outerHTML).join('')}</div>
+    <div class="shelf">${G.recipes.map(k => ruleTag(myRecipe(k), G.lv[k] || 1).outerHTML).join('')}</div>
+    <div class="btns"><button class="pill" id="go">${icon('again')}再开一局</button></div>`);
+  $('#go').onclick = () => { closeSheet(); start(); };
+}
+function showWin() {
+  const best = G.bestCook || 0;
+  Music.scene('menu', 1.2);
+  sheet(`<h1>通关！</h1><div class="sub">8 关全部通过</div>
+    <div class="bill" style="max-width:300px">
+      <div class="ln" style="animation-delay:0s">${icon('check')}<span>通过回合</span><b style="color:var(--ink)">${G.history.length}</b></div>
+      <div class="ln" style="animation-delay:.2s">${icon('flame')}<span>最高的一次出牌</span><b style="color:var(--ink)">${best}</b></div>
+      <div class="ln" style="animation-delay:.4s">${icon('coin')}<span>一共赚了</span><b>${G.earned}</b></div>
+      <div class="ln" style="animation-delay:.6s">${icon('spark')}<span>喂饱挑剔食客</span><b style="color:var(--ink)">${G.bossesBeat}</b></div>
+    </div>
+    <h2>${icon('board')}最终菜谱</h2>
+    <div class="shelf">${G.recipes.map(k => ruleTag(myRecipe(k), G.lv[k] || 1).outerHTML).join('')}</div>
     <div class="btns"><button class="pill" id="go">${icon('again')}再开一局</button></div>`);
   $('#go').onclick = () => { closeSheet(); start(); };
 }

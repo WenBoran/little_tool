@@ -11,39 +11,39 @@ function run(cards, play, o = {}) {
   const uids = play.map(i => G.hand[i].uid);
   const p = K.playSel(G, uids);
   const cnt = k => G.deck.filter(x => x === k).length, st = k => G.deck.map((x, i) => x === k ? G.stamps[i] : undefined).filter(x => x !== undefined);
-  return { G, p, cnt, st, dis: G.discard.map(c => c.key) };
+  // back：放回牌堆（或因「切」多摸又回到手里）的牌，本回合还能再用
+  const back = k => G.pile.concat(G.hand).filter(c => c.key === k).length;
+  return { G, p, cnt, st, back, dis: G.discard.map(c => c.key) };
 }
 let r;
-r = run([['egg'], ['fry']], [0, 1]); ok(r.cnt('egg') === 0 && r.cnt('fry') === 0, '没有伙计：原料手法都用掉');
-r = run([['egg'], ['mix']], [0, 1], { helpers: ['chen'] }); ok(r.cnt('tofu') === 1 && r.cnt('egg') === 0 && r.cnt('mix') === 0, '豆腐坊老陈：搅过的蛋 → 豆腐回牌组');
+r = run([['egg'], ['fry']], [0, 1]); ok(r.cnt('egg') === 1 && r.cnt('fry') === 1 && r.dis.length === 2 && !r.back('egg'), '没有伙计：打出的牌进弃牌堆，牌组不变');
+r = run([['egg'], ['mix']], [0, 1], { helpers: ['chen'] }); ok(r.cnt('tofu') === 1 && r.cnt('egg') === 0 && r.cnt('mix') === 1, '豆腐老陈：搅过的蛋 → 豆腐');
 r = run([['egg'], ['fry']], [0, 1], { helpers: ['chen'] }); ok(r.cnt('tofu') === 0, '豆腐坊老陈：煎的蛋不变');
 r = run([['scallion'], ['scallion'], ['stir']], [0, 1, 2], { helpers: ['ershen'] }); ok(r.cnt('scallion') === 3, `种葱的二婶：2 葱留下 +1 → ${r.cnt('scallion')}`);
 r = run([['scallion'], ['stir']], [0, 1], { helpers: ['ershen'], deck: Array(40).fill('egg') }); ok(r.cnt('scallion') === 2, '二婶：牌组不设上限，40 张也照样多一张');
 r = run([['egg'], ['mix']], [0, 1], { helpers: ['liu'] }); ok(r.cnt('stir') === 1 && r.cnt('mix') === 0, '学徒小刘：搅拌 → 炒');
 r = run([['mix'], ['egg']], [0, 1], { helpers: ['liu'] }); ok(r.p === null || r.cnt('stir') === 0, '学徒小刘：没起作用的搅拌不变');
-r = run([['tomato'], ['egg'], ['stir']], [0, 1, 2], { helpers: ['zhou'], deck: ['egg', 'egg', 'egg', 'tomato'] }); ok(r.cnt('egg') === 4 && r.cnt('tomato') === 1, `收菜的老周：番茄 → 鸡蛋（蛋 ${r.cnt('egg')} 番茄 ${r.cnt('tomato')}）`);
-r = run([['egg'], ['fry'], ['chili'], ['soy']], [0, 1, 2, 3], { helpers: ['mei'] }); ok(r.cnt('salt') === 1 && r.cnt('chili') === 0 && r.cnt('soy') === 0, '洗碗的小妹：第一张调料 → 盐');
-r = run([['tomato'], ['cut'], ['potato'], ['cut']], [0, 1, 2, 3], { helpers: ['sun'] }); ok(r.dis.length === 0 && r.cnt('cut') === 1, '磨刀的老孙：1 张切放回牌组');
-r = run([['egg'], ['fry'], ['tomato'], ['potato'], ['beef']], [0, 1, 2, 3, 4], { helpers: ['dashen'] }); ok(r.dis.length === 0 && r.cnt('egg') === 0 && r.cnt('tomato') + r.cnt('potato') + r.cnt('beef') === 2, '帮厨大婶：生料放回牌组最多 2 张');
+r = run([['tomato'], ['egg'], ['tomato'], ['stir']], [0, 1, 2, 3], { helpers: ['zhou'] }); ok(r.p.ev.steps.some(s => s.kind === 'helper' && s.add === 6) && !r.back('tomato'), '收菜老周：2 种原料 +6，不回牌堆');
+r = run([['egg'], ['fry'], ['chili'], ['soy']], [0, 1, 2, 3], { helpers: ['mei'] }); ok(r.cnt('salt') === 1 && r.cnt('chili') === 0 && r.cnt('soy') === 1, '洗碗小妹：第一张调料 → 盐');
+r = run([['tomato'], ['cut'], ['potato'], ['cut']], [0, 1, 2, 3], { helpers: ['sun'] }); ok(r.p.ev.after.draw === 4 && !r.back('cut'), '磨刀老孙：每张切多摸 2 张');
+r = run([['egg'], ['fry'], ['tomato'], ['potato'], ['beef']], [0, 1, 2, 3, 4], { helpers: ['dashen'] }); ok(r.p.ev.steps.some(s => s.kind === 'helper' && s.add === 9) && !r.back('tomato'), '帮厨大婶：3 份生料 +9');
 r = run([['egg'], ['fry']], [0, 1], { helpers: ['jiang'] }); ok(r.cnt('egg') === 1 && r.st('egg')[0] === 'aroma', '酱园掌柜：触发菜谱的蛋盖「香」');
-r = run([['tomato'], ['fry']], [0, 1], { helpers: ['jiang'] }); ok(r.cnt('tomato') === 0, '酱园掌柜：没触发菜谱不盖');
+r = run([['tomato'], ['fry']], [0, 1], { helpers: ['jiang'] }); ok(!r.st('tomato')[0], '酱园掌柜：没触发菜谱不盖');
 r = run([['egg', 'fresh'], ['fry', 'aroma']], [0, 1], { helpers: ['fan'] }); ok(r.st('egg')[0] === 'aroma' && r.st('fry')[0] === 'gold', '鲜货贩子：鲜→香、香→金');
-r = run([['egg', 'gold'], ['fry']], [0, 1], { helpers: ['jin'] }); ok(r.st('egg')[0] === 'gold' && r.G.coins >= 1, '金掌柜：金留下');
-r = run([['egg'], ['fry']], [0, 1], { helpers: ['huotou'], before: G => { G.playsLeft = 1; } }); ok(r.st('fry')[0] === 'fresh' && r.cnt('egg') === 0, '火头军：最后一锅的手法盖鲜');
+r = run([['egg', 'gold'], ['fry']], [0, 1], { helpers: ['jin'] }); ok(r.st('egg')[0] === 'gold' && r.p.ev.mult === 1.5 && !r.back('egg'), '金掌柜：金 倍+.5，不回牌堆');
+r = run([['egg'], ['fry']], [0, 1], { helpers: ['huotou'], before: G => { G.playsLeft = 1; } }); ok(r.st('fry')[0] === 'fresh' && !r.st('egg')[0], '火头军：最后一锅的手法盖鲜');
 r = run([['egg'], ['fry']], [0, 1], { helpers: ['huotou'], target: 5 }); ok(r.st('fry')[0] === 'fresh', '火头军：达标那锅也算收尾');
-r = run([['egg'], ['fry']], [0, 1], { helpers: ['huotou'] }); ok(r.cnt('fry') === 0, '火头军：中间的锅不算');
-r = run([['egg'], ['beef'], ['fry'], ['salt']], [0, 1, 2, 3], { helpers: ['wang'] }); ok(r.st('beef')[0] === 'fresh' && r.cnt('egg') === 0, '酱缸王伯：调料锅最高分原料（牛肉）盖鲜');
-r = run([['egg'], ['tomato'], ['stir']], [0, 1, 2], { helpers: ['qiang'] }); ok(r.cnt('egg') === 1 && r.cnt('tomato') === 1 && r.cnt('stir') === 0, '双灶阿强：首次出牌原料放回牌组');
+r = run([['egg'], ['fry']], [0, 1], { helpers: ['huotou'] }); ok(!r.st('fry')[0], '火头军：中间的锅不算');
+r = run([['egg'], ['beef'], ['fry'], ['salt']], [0, 1, 2, 3], { helpers: ['wang'] }); ok(r.st('beef')[0] === 'fresh' && !r.st('egg')[0], '酱缸王伯：调料锅最高分原料（牛肉）盖鲜');
+r = run([['egg'], ['tomato'], ['stir']], [0, 1, 2], { helpers: ['qiang'] }); ok(r.p.ev.mult === 2 && !r.back('egg'), '双灶阿强：首次出牌 倍+1');
 { const G = K.newRun(11); G.target = 9999; G.helpers = ['qiang']; G.recipes = ['jiandan']; G.deck = []; G.stamps = []; G.pile = []; G.discard = []; G.handSize = 0; G.cooks = 0; G.slotCap = 8;
   const a = ['egg', 'fry', 'egg', 'fry', 'tomato'].map(k => K.mk(k)); G.hand = a.slice(); a.forEach(c => { G.deck.push(c.key); G.stamps.push(null); });
-  K.playSel(G, [a[0].uid, a[1].uid]); K.playSel(G, [a[2].uid, a[3].uid]); ok(G.deck.filter(k => k === 'egg').length === 1, '双灶阿强：第二次出牌不生效'); }
-r = run([['egg'], ['fry']], [0, 1], { helpers: ['apo'], target: 20 }); ok(r.cnt('egg') === 1 && r.cnt('fry') === 1, `打包阿婆：${r.p.ev.total} 分 ≥ 目标一半，全留`);
-r = run([['egg'], ['fry']], [0, 1], { helpers: ['apo'], target: 200 }); ok(r.cnt('egg') === 0, '打包阿婆：不到一半不留');
-r = run([['egg', 'keep'], ['fry']], [0, 1]); ok(r.st('egg')[0] === 'keep', '「留」印记：留下且印记还在');
+  K.playSel(G, [a[0].uid, a[1].uid]); K.playSel(G, [a[2].uid, a[3].uid]); ok(G.last.ev.mult === 1, '双灶阿强：第二次出牌不生效'); }
+r = run([['egg', 'quick'], ['fry']], [0, 1]); ok(r.st('egg')[0] === 'quick' && r.p.ev.after.draw === 1 && !r.back('egg'), '「顺」印记：多摸 1 张，印记还在');
 r = run([['egg', 'dup'], ['fry']], [0, 1]); ok(r.cnt('egg') === 2 && r.st('egg').every(s => !s), '「双」印记：变 2 张，都不带印记');
-r = run([['mushroom'], ['steam'], ['tomato'], ['cut'], ['steamer'], ['cboard']], [0, 1, 2, 3, 4, 5]); ok(r.cnt('mushroom') === 1 && r.st('tomato')[0] === 'fresh' && r.cnt('steamer') === 1, '蒸笼留蒸料、砧板切料盖鲜');
-r = run([['mushroom'], ['mix']], [0, 1], { recipes: ['paofa'] }); ok(r.cnt('mushroom') === 1 && r.st('mushroom')[0] === 'keep', '泡发香菇：蘑菇盖「留」留下');
-r = run([['scallion'], ['deep']], [0, 1], { recipes: ['congyou'] }); ok(r.cnt('chili') === 1 && r.cnt('scallion') === 0, '葱油：多 1 张辣椒');
+r = run([['mushroom'], ['steam'], ['tomato'], ['cut'], ['steamer'], ['cboard']], [0, 1, 2, 3, 4, 5]); ok(r.cnt('mushroom') === 1 && r.st('tomato')[0] === 'fresh' && r.cnt('steamer') === 1 && r.p.ev.cardScore[r.p.slots[0].uid] === 5, '蒸笼 蒸料+2、砧板切料盖鲜');
+r = run([['mushroom'], ['mix']], [0, 1], { recipes: ['paofa'] }); ok(r.cnt('mushroom') === 1 && r.st('mushroom')[0] === 'fresh' && !r.back('mushroom'), '泡发香菇：蘑菇盖「鲜」');
+r = run([['scallion'], ['deep']], [0, 1], { recipes: ['congyou'] }); ok(r.cnt('chili') === 1 && r.cnt('scallion') === 1, '葱油：多 1 张辣椒');
 r = run([['egg'], ['mix']], [0, 1], { helpers: ['chen'], before: G => { G.boss = { ban: ['egg'] }; } }); ok(r.cnt('tofu') === 0, '挑剔食客不吃：0 分，伙计也不生效');
 // 去向预览和真实结算一致
 { const G = K.newRun(3); G.helpers = ['chen', 'jiang', 'liu']; G.hand = [K.mk('egg'), K.mk('mix')]; G.deck.push('egg', 'mix'); G.stamps.push(null, null); G.target = 9999;

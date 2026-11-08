@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>一手好菜</title>
+<style id="font"></style>
+<style id="css2"></style>
+</head>
+<body>
+<div id="app">
+  <aside id="ticket">
+    <span class="clip"></span>
+    <div class="t-row"><div id="lvname"></div><button id="helpBtn" class="qm" aria-label="玩法说明">?</button></div>
+    <div id="pips"></div>
+    <div id="bossTag"></div>
+    <hr class="dash">
+    <div class="t-score">
+      <div class="lb">总分 / 目标</div>
+      <div class="sc"><b id="got">0</b><span class="of">/<b id="tgt">20</b></span></div>
+      <div id="bar"><i class="got"></i><i class="pre"></i></div>
+    </div>
+    <div id="calc"><div class="box chip" id="cChip">0</div><span class="x">×</span><div class="box mult" id="cMult">1</div></div>
+    <div id="calcTot"></div>
+    <hr class="dash">
+    <div class="t-bar">
+      <div class="t-counts">
+        <div class="cnt play"><b id="nPlay">5</b><span>出牌</span></div>
+        <div class="cnt disc"><b id="nDisc">3</b><span>弃牌</span></div>
+      </div>
+      <div class="t-coins"><span id="coinIco"></span><b id="coins">0</b></div>
+      <div id="helpers"></div>
+    </div>
+  </aside>
+  <div id="main">
+    <div id="rail" aria-label="已拥有的菜谱"><div id="rules"></div></div>
+    <main id="stove">
+      <div id="equips"></div>
+      <div id="spices"></div>
+      <div id="pot"><div id="slots"></div><svg id="links"></svg><div id="warn"></div></div>
+      <div id="flame"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </main>
+    <section id="board">
+      <div id="piles">
+        <div class="pile" id="pile" ><i></i><i></i><i></i><b></b></div>
+        <div class="pile dis" id="dis" ><i></i><b></b></div>
+      </div>
+      <div id="hand" aria-label="手牌"></div>
+      <div id="acts">
+        <button id="playBtn" class="act play"><span class="ico"></span><span>出牌</span></button>
+        <button id="discBtn" class="act disc"><span class="ico"></span><span>弃牌</span></button>
+      </div>
+    </section>
+  </div>
+</div>
+<div id="fx"></div>
+<div id="veil" hidden><div id="sheet" role="dialog"></div></div>

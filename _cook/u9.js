@@ -8,30 +8,32 @@ ICONS.stamp = '<path d="M19 6h10v10c0 3 6 4 6 9v3H13v-3c0-5 6-6 6-9z"/><path d="
 
 function wareBody(it) {
   if (it.kind === 'recipe') return ruleTag(RECIPE_BY[it.key]).outerHTML;
-  if (it.kind === 'up') { const l = G.lv[it.key] || 1; return ruleTag(RECIPE_BY[it.key], l + 1).outerHTML; }
+  if (it.kind === 'up') { const l = G.lv[it.key] || 1; return ruleTag(myRecipe(it.key), l + 1).outerHTML; }
   if (it.kind === 'helper') return helperCard(it.key);
   if (it.kind === 'pack') return packCard(it.key);
   return cardEl({ uid: 0, key: it.key, def: CARD_DEFS[it.key], stamp: it.stamp }).outerHTML;
 }
 function helperCard(k) {
   const h = HELPER_BY[k];
-  return `<div class="card helper"><div class="cf"><div class="hav">${icon(h.icon)}</div><div class="hnm">${h.name}</div><div class="hds">${tagPills(h.tag)}</div></div></div>`;
+  return `<div class="card helper"><div class="cf"><div class="hav">${icon(h.icon)}</div><div class="hnm">${h.name}</div></div></div>`;
 }
 function packCard(k) {
   const p = PACKS[k];
   return `<div class="card pack ${k}"><div class="cf"><div class="pkic">${icon('gift')}</div><div class="hnm">${p.name}</div><div class="hds">${p.show} 选 ${p.pick}</div></div></div>`;
 }
 // 统一的区块：每个区块 = 标题条（图标 + 名字 + 一句话）+ 内容区
-const block = (id, ic, name, hint, cls = '') => `<section class="blk ${cls}"><header>${icon(ic)}<b>${name}</b><span>${hint}</span></header><div class="blk-in" id="${id}"></div></section>`;
+const block = (id, ic, name, hint, cls = '') => `<section class="blk ${cls}"><header>${icon(ic)}<b>${name}</b>${hint ? `<span>${hint}</span>` : ''}</header><div class="blk-in" id="${id}"></div></section>`;
 const costTag = (p, off) => `<span class="cost${off ? ' no' : ''}">${icon('coin')}${p}</span>`;
 // 商品：上面是牌（点一下看效果），下面是购买按钮（点按钮才买）；买完整格留空
 const noFx = h => h.replace(/ data-fx="[^"]*"/g, '');
 const attr = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 function itemFx(it) {
   if (it.kind === 'recipe' || it.kind === 'up') {
-    const r = RECIPE_BY[it.key], lv = it.kind === 'up' ? (G.lv[it.key] || 1) + 1 : 1;
-    return recipeTip(r, lv, it.kind === 'up' ? `升级后的效果（现在 Lv${lv - 1}）` : '');
+    const r = it.kind === 'up' ? myRecipe(it.key) : RECIPE_BY[it.key], lv = it.kind === 'up' ? (G.lv[it.key] || 1) + 1 : 1;
+    return recipeTip(r, lv, it.kind === 'up' ? `升级后的效果（现在 Lv${lv - 1}）` : recipesFull(G) ? `菜谱栏已满（${CFG.maxRecipes} 道），先卖掉一道` : '');
   }
+  if (it.kind === 'heat') { const n = capOf({ key: it.key, def: CARD_DEFS[it.key] }, []); return { t: `「${CARD_DEFS[it.key].name}」火候 +1`, k: '永久', b: [`「${CARD_DEFS[it.key].name}」加工 ${n} 份 → ${n + 1} 份`], n: [`已升 ${(G.capUp || {})[it.key] || 0}/${CFG.heatMax} 次`] }; }
+  if (it.kind === 'modfx') return { t: '菜谱改良', k: '改法', b: [modText(it)], n: ['选了以后再挑一道菜谱；菜谱里没有这样东西就不变'] };
   if (it.kind === 'helper') return helperTip(it.key);
   if (it.kind === 'upg') { const u = UPGRADES.find(u => u.key === it.key); return { t: `${u.name} +1`, k: '灶台升级', b: ['永久生效'], n: [`现在 ${G.up[it.key]}/${u.prices.length} 级`] }; }
   return cardTip({ uid: 0, key: it.key, def: CARD_DEFS[it.key], stamp: it.stamp });
@@ -41,23 +43,64 @@ const fxAttr = it => { const o = itemFx(it); return hasTip(o) ? ` data-fx="${tip
 const buyBtn = (p, off, attrs) => `<button class="buy${off ? ' no' : ''}" ${attrs} ${off ? 'disabled' : ''}>${icon('coin')}${p}</button>`;
 function wareHTML(it, i) {
   if (it.sold) return `<span class="ware gone"></span>`;
-  const full = it.kind === 'helper' && G.helpers.length >= CFG.maxHelpers;
-  const off = G.coins < it.price || full;
+  const full = it.kind === 'helper' && G.helpers.length >= CFG.maxHelpers, rfull = it.kind === 'recipe' && recipesFull(G);
+  const off = G.coins < it.price || full || rfull;
   const st = it.stamp && STAMPS[it.stamp];
   return `<div class="ware${off ? ' off' : ''}"><span class="ware-art"${fxAttr(it)}>${noFx(wareBody(it))}</span>
-    ${it.n > 1 ? `<span class="qty">×${it.n}</span>` : ''}${full ? '<button class="buy no" disabled>伙计已满</button>' : buyBtn(it.price, off, `data-act="buy" data-i="${i}"`)}</div>`;
+    ${it.n > 1 ? `<span class="qty">×${it.n}</span>` : ''}${full ? '<button class="buy no" disabled>伙计已满</button>' : rfull ? '<button class="buy no" disabled>菜谱已满</button>' : buyBtn(it.price, off, `data-act="buy" data-i="${i}"`)}</div>`;
 }
-// 包：补货包、原料、手法、调料、菜谱、升级、加工、精简，同一种样式
+// 包：原料、手法、调料、菜谱、升级、加工、精简、改良，同一种样式
 const packDesc = k => PACKS[k].all ? `随机 ${PACKS[k].show} 张` : PACKS[k].show ? `${PACKS[k].show} 选 ${PACKS[k].pick}` : `去掉 ${PACKS[k].pick} 张`;
+// 这种包这回合出现的概率：每回合从能出的包里按权重不放回抽两种
+function packChance(k) {
+  const ks = Object.keys(PACKS).filter(x => packOk(G, x)), w = x => PACKS[x].w, tot = ks.reduce((s, x) => s + w(x), 0);
+  if (!ks.includes(k)) return 0;
+  let p = w(k) / tot;
+  ks.forEach(a => { if (a !== k) p += w(a) / tot * w(k) / (tot - w(a)); });
+  return p;
+}
 function packFx(k) {
-  const p = PACKS[k];
-  return { t: p.name, k: '包', b: [packDesc(k)] };
+  const p = PACKS[k], b = [packDesc(k)];
+  if (p.desc) b.push(p.desc);
+  return { t: p.name, k: '包', b, n: [`每回合出现概率约 ${Math.round(packChance(k) * 100)}%`] };
 }
 function packHTML(it, i) {
   const pk = PACKS[it.key], off = G.coins < it.price;
   if (it.sold) return `<span class="pkb gone"></span>`;
   return `<div class="pkb ${it.key}${off ? ' off' : ''}" data-fx="${tipAttr(packFx(it.key))}">
     <span class="pk-ic">${icon(pk.icon)}<i>${icon('gift')}</i></span><span class="pk-tx"><b>${pk.name}</b>${packDesc(it.key) ? `<small>${packDesc(it.key)}</small>` : ''}</span>${buyBtn(it.price, off, `data-act="pack" data-i="${i}"`)}</div>`;
+}
+// 菜谱改良包的改法卡：左边原来的东西 → 右边换成的东西
+ICONS.mtx = '<path d="M14 14l20 20M34 14L14 34" stroke-width="5"/>';
+function modTile(o) {
+  const ic = k => k ? `<span class="mt-ic ${CARD_DEFS[k].type}">${icon(k)}</span>` : `<span class="mt-ic del">${icon('mtx')}</span>`;
+  const head = { swapIng: '换原料', swapTech: '换手法', delIng: '去掉原料', delTech: '去掉手法', addIng: '加料' }[o.op];
+  const row = o.op === 'addIng' ? `<span class="mt-plus">+</span>${ic(o.to)}` : `${ic(o.from)}<span class="mt-ar">→</span>${ic(o.to)}`;
+  return `<div class="card modfx${o.rare ? ' rare' : ''}"><div class="cf"><div class="hds">${o.rare ? '稀有 · ' : ''}${head}</div><div class="mt-row">${row}</div><div class="hnm">${modText(o)}</div></div></div>`;
+}
+// 改完以后的菜谱（用来预览）
+const modRecipe = (rk, o) => Object.assign({}, effRecipe(Object.assign({}, G.mods, { [rk]: applyModFx(effRecipe(G.mods, rk), o) }), rk), { modded: 1 });
+// 第二步：挑一道菜谱让改法生效
+function showModPick(j) {
+  const pk = G.pack, o = pk.items[j];
+  const list = G.recipes.map(k => {
+    const cur = myRecipe(k), ch = modChanges(effRecipe(G.mods, k), o), lv = G.lv[k] || 1;
+    return `<div class="ware pkw mpick${ch ? '' : ' same'}"><span class="kind">${ch ? '改成' : '没有变化'}</span><span class="ware-art" data-fx="${tipAttr(recipeTip(ch ? modRecipe(k, o) : cur, lv, ch ? `原来：${recipeCond(cur)}` : '这道菜谱里没有要改的东西'))}">${ruleTag(ch ? modRecipe(k, o) : cur, lv).outerHTML}</span>
+      ${ch ? `<button class="buy take" data-k="${k}">改这道</button>` : ''}</div>`;
+  }).join('');
+  sheet(`<h1>选一道菜谱</h1><div class="sub">${modText(o)}</div><div class="shelf pkopen${G.recipes.length > 4 ? ' many' : ''}" id="pkRow">${list}</div>
+    <div class="btns"><button class="pill o sm" id="pkGo">换个改法</button></div>`, 'pkwin');
+  $('#pkRow').onclick = e => { const b = e.target.closest('.take'); if (!b) return; hideFx();
+    if (takeFromPack(G, j, b.dataset.k)) { buySfx(); renderRules(); setTimeout(() => { closePack(G); showShop(); }, 300); } };
+  $('#pkGo').onclick = () => { hideFx(); showPack(); };
+}
+// 菜谱栏：卖菜谱（第一下看效果，第二下卖掉）
+function recipesHTML() {
+  return Array.from({ length: CFG.maxRecipes }, (_, i) => {
+    const k = G.recipes[i]; if (!k) return `<span class="rslot empty"></span>`;
+    const r = myRecipe(k);
+    return `<button class="rslot" data-act="sell" data-k="${k}" data-fx="${tipAttr(recipeTip(r, G.lv[k] || 1, `再点一下卖掉，退 ${sellPrice(G, k)} 铜钱`))}">${icon(r.tech)}<small>${r.name}</small></button>`;
+  }).join('');
 }
 function helpersHTML() {
   return Array.from({ length: CFG.maxHelpers }, (_, i) => {
@@ -71,6 +114,7 @@ function paintShop() {
   q('shelf').innerHTML = G.shop.map((it, i) => wareHTML(it, i)).join('');
   q('packs').innerHTML = G.packs.map(packHTML).join('');
   q('sdHelp').innerHTML = helpersHTML();
+  q('sdRec').innerHTML = recipesHTML(); q('recN').textContent = `${G.recipes.length}/${CFG.maxRecipes}`;
   const rc = rerollCost(G), rb = q('reroll'); rb.disabled = G.coins < rc; rb.innerHTML = `${icon('again')}换一批${costTag(rc, G.coins < rc)}`;
   q('wallet').textContent = G.coins; q('deckN').textContent = G.deck.length;
   renderTicket(previewSel(G, []));
@@ -81,9 +125,10 @@ function showShop() {
   sheet(`<div class="shop-top"><h1>商店</h1><span class="wallet">${icon('coin')}<b id="wallet">${G.coins}</b></span>
       <button class="pill o sm" data-act="deck">${icon('deck')}牌组 <b id="deckN">${G.deck.length}</b></button></div>
     <div class="shop">
-      <section class="blk wood"><header>${icon('board')}<b>精选</b><span>菜谱、伙计和单卖的牌</span><button class="rr" id="reroll" data-act="reroll"></button></header><div class="blk-in" id="shelf"></div></section>
-      ${block('packs', 'gift', '包', '每回合随机两种，打开后挑', 'purple')}
-      <section class="blk dark hl"><header>${icon('hat')}<b>伙计</b><span>${G.helpers.length}/${CFG.maxHelpers}</span></header><div class="blk-in" id="sdHelp"></div></section>
+      <section class="blk wood"><header>${icon('board')}<b>精选</b><button class="rr" id="reroll" data-act="reroll"></button></header><div class="blk-in" id="shelf"></div></section>
+      ${block('packs', 'gift', '包', '', 'purple')}
+      <section class="blk dark hl"><header>${icon('hat')}<b>伙计</b><span>${G.helpers.length}/${CFG.maxHelpers}</span></header><div class="blk-in" id="sdHelp"></div>
+        <header class="sub2">${icon('board')}<b>菜谱</b><span id="recN"></span></header><div class="blk-in rrow" id="sdRec"></div></section>
     </div>
     <div class="btns">
       ${nextBoss ? `<span class="bosschip"><span class="av">${icon(nextBoss.icon)}</span><div><b>下一位：${nextBoss.name}</b><span>${nextBoss.rule}</span></div></span>` : ''}
@@ -99,7 +144,7 @@ $('#sheet').addEventListener('click', e => {
   if (art) {
     if (fxEl !== art || fxTip.hidden) return;                 // 第一下：交给浮框显示说明
     const btn = art.closest('.ware, .pkb').querySelector('button.buy'); if (!btn) return;
-    if (btn.disabled) { sfx.nope(); toast(/已满/.test(btn.textContent) ? '伙计已满' : '铜钱不够'); return; }
+    if (btn.disabled) { sfx.nope(); toast(/已满/.test(btn.textContent) ? btn.textContent : '铜钱不够'); return; }
     e.stopPropagation(); hideFx(); btn.click(); return;
   }
   const b = e.target.closest('[data-act]'); if (!b || b.disabled || G.phase !== 'shop') return;
@@ -117,6 +162,9 @@ $('#sheet').addEventListener('click', e => {
   } else if (act === 'pack') {
     if (!openPack(G, +b.dataset.i)) return; sfx.pack();
     if (G.pack.key === 'trim') showDeck('trim'); else showPack();
+  } else if (act === 'sell') {   // 第一下看效果，第二下卖掉
+    if (fxEl !== b || fxTip.hidden) { showFx(b, 0); return; }
+    if (sellRecipe(G, b.dataset.k)) { sfx.fire(); hideFx(); renderRules(); paintShop(); }
   } else if (act === 'fire') {   // 第一下看效果，第二下辞退
     if (fxEl !== b || fxTip.hidden) { showFx(b, 0); return; }
     if (fire(G, b.dataset.k)) { sfx.fire(); hideFx(); showShop(); }
@@ -125,7 +173,12 @@ $('#sheet').addEventListener('click', e => {
   else if (act === 'deck') showDeck('view');
 });
 
-// 打开包：内容一张张翻开，挑完回商店（补货包直接全收）
+// 打开包：内容一张张翻开，挑完回商店
+// 火候包的选项：手法图标 + 加工份数变化
+function heatTile(k) {
+  const n = capOf({ key: k, def: CARD_DEFS[k] }, []);
+  return `<div class="card upg heat"><div class="cf"><div class="pkic">${icon(k)}</div><div class="hnm">${CARD_DEFS[k].name} +1 份</div><div class="hds">${n} → ${n + 1} 份</div></div></div>`;
+}
 function upgTile(k) {
   const u = UPGRADES.find(u => u.key === k), lv = G.up[k];
   return `<div class="card upg"><div class="cf"><div class="pkic">${icon(u.icon)}</div><div class="hnm">${u.name} +1</div><div class="hds">${'●'.repeat(lv)}${'○'.repeat(u.prices.length - lv)}</div></div></div>`;
@@ -134,10 +187,12 @@ function showPack() {
   const pk = G.pack, def = PACKS[pk.key];
   const body = it => it.kind === 'card' || it.kind === 'stamp' ? cardEl({ uid: 0, key: it.key, def: CARD_DEFS[it.key], stamp: it.stamp }).outerHTML
     : it.kind === 'upg' ? upgTile(it.key)
-    : it.kind === 'up' ? ruleTag(RECIPE_BY[it.key], (G.lv[it.key] || 1) + 1).outerHTML : ruleTag(RECIPE_BY[it.key]).outerHTML;
+    : it.kind === 'heat' ? heatTile(it.key)
+    : it.kind === 'modfx' ? modTile(it)
+    : it.kind === 'up' ? ruleTag(myRecipe(it.key), (G.lv[it.key] || 1) + 1).outerHTML : ruleTag(RECIPE_BY[it.key]).outerHTML;
   const paint = () => {
     $('#pkRow').innerHTML = pk.items.map((it, j) => it.taken && !def.all ? `<span class="ware pkw gone"></span>`
-      : `<div class="ware pkw${def.all ? ' got' : ''}" style="animation-delay:${j * 70}ms"><span class="ware-art"${fxAttr(it)}>${noFx(body(it))}</span>${def.all ? '' : `<button class="buy take" data-j="${j}" ${pk.left ? '' : 'disabled'}>要这个</button>`}</div>`).join('');
+      : `<div class="ware pkw${def.all ? ' got' : ''}" style="animation-delay:${j * 70}ms"><span class="ware-art"${fxAttr(it)}>${noFx(body(it))}</span>${def.all ? '' : it.kind === 'recipe' && recipesFull(G) ? '<button class="buy no" disabled>菜谱已满</button>' : it.kind === 'modfx' && !modUseful(G, it) ? '' : `<button class="buy take" data-j="${j}" ${pk.left ? '' : 'disabled'}>要这个</button>`}</div>`).join('');
     $('#pkLeft').textContent = def.all ? '' : `选 ${pk.left}`;
   };
   const back = () => { if (G.pack !== pk) return; closePack(G); showShop(); };
@@ -145,7 +200,9 @@ function showPack() {
     ${def.all ? '' : '<div class="btns"><button class="pill o sm" id="pkGo">不要了</button></div>'}`, 'pkwin');
   paint();
   // 挑满就自动回商店；补货包全收，亮一下牌就回去（点一下窗口可以提前回）
-  $('#pkRow').onclick = e => { const b = e.target.closest('.take'); if (!b || b.disabled) return; hideFx(); if (takeFromPack(G, +b.dataset.j)) { buySfx(); paint(); if (!pk.left) setTimeout(back, 380); } };
+  $('#pkRow').onclick = e => { const b = e.target.closest('.take'); if (!b || b.disabled) return; hideFx();
+    if (pk.items[+b.dataset.j].kind === 'modfx') { showModPick(+b.dataset.j); return; }
+    if (takeFromPack(G, +b.dataset.j)) { buySfx(); renderRules(); paint(); if (!pk.left) setTimeout(back, 380); } };
   if (def.all) { setTimeout(back, 1600); $('#sheet').onclick = back; }
   else $('#pkGo').onclick = back;
 }

@@ -1,12 +1,19 @@
 // ===== 对局状态机（选牌 → 出牌 / 弃牌）=====
-function targetFor(level, round) { const t = CFG.rounds[round] * Math.pow(CFG.growth, level - 1); return t < 60 ? Math.round(t) : Math.round(t / 5) * 5; }
+function targetFor(level, round) {
+  const i = (level - 1) * CFG.rounds.length + round;
+  if (i < CFG.rounds.length) return CFG.rounds[i];
+  // 按整局回合连续增长，换关不再退回第一回合的低目标。
+  const t = CFG.rounds[CFG.rounds.length - 1] * Math.pow(CFG.growth, i - CFG.rounds.length + 1);
+  return Math.round(t / 5) * 5;
+}
 const isBossRound = G => G.round === CFG.rounds.length - 1;
 
 function newRun(seed, defer) {
   UID = 1;
+  // deck / stamps / plus 三个数组一一对应：牌名、印记、「烤」攒下的永久牌面分；mods：改良过的菜谱
   const G = { seed, r: rng(seed), level: 1, round: 0, coins: CFG.startCoins, deck: START_DECK.slice(),
-    stamps: START_DECK.map(() => null), helpers: [], up: { slot: 0, hand: 0, play: 0, disc: 0 },
-    recipes: START_RECIPES.slice(), lv: {}, mast: {}, phase: 'play', history: [], earned: 0, bossesBeat: 0 };
+    stamps: START_DECK.map(() => null), plus: START_DECK.map(() => 0), helpers: [], up: { slot: 0, hand: 0, play: 0, disc: 0 },
+    recipes: START_RECIPES.slice(), lv: {}, mast: {}, mods: {}, capUp: {}, phase: 'play', history: [], earned: 0, bossesBeat: 0 };
   pickBoss(G); startRound(G, defer);
   return G;
 }
@@ -20,12 +27,13 @@ function startRound(G, defer) {
   G.target = targetFor(G.level, G.round);
   G.boss = isBossRound(G) ? BOSS_BY[G.bossKey] : null;
   G.score = 0; G.cooks = 0; G.tips = 0; G.used = [];
-  G.pile = shuffle(G.deck.map((k, i) => mk(k, G.stamps[i])), G.r);
-  G.hand = []; G.discard = []; G.equipped = []; G.reshuffles = 0;
+  // di：这张牌在牌组里的位置（出锅后改牌、盖印、烤分都写回这里）
+  G.pile = shuffle(G.deck.map((k, i) => Object.assign(mk(k, G.stamps[i], (G.plus || [])[i]), { di: i })), G.r);
+  G.hand = []; G.discard = []; G.equipped = [];
   G.slotCap = CFG.baseSlots + G.up.slot;
   G.playsLeft = G.boss && G.boss.plays ? G.boss.plays : CFG.plays + G.up.play;
   G.discardsLeft = CFG.discards + G.up.disc + G.helpers.filter(k => HELPER_BY[k].fx.disc).length; G.last = null;
-  G.handSize = CFG.hand + G.up.hand + (G.boss && G.boss.hand || 0);
+  G.handSize = CFG.hand + G.up.hand + (G.boss && G.boss.hand || 0) + G.helpers.reduce((s, k) => s + (HELPER_BY[k].fx.hand || 0), 0);
   G.phase = 'deal';
   if (!defer) dealRound(G);
 }
@@ -35,13 +43,10 @@ function dealRound(G) {
   return true;
 }
 
-// 摸牌：牌堆空了就把弃牌堆洗回去（食材不会用光）
+// 摸牌：回合内不重洗，牌堆摸空就没有了（下回合整副牌组重新洗）
 function draw(G, n) {
   const got = [];
-  while (n-- > 0) {
-    if (!G.pile.length) { if (!G.discard.length) break; G.pile = shuffle(G.discard, G.r); G.discard = []; G.reshuffles++; }
-    const c = G.pile.pop(); G.hand.push(c); got.push(c);
-  }
+  while (n-- > 0 && G.pile.length) { const c = G.pile.pop(); G.hand.push(c); got.push(c); }
   return got;
 }
 // 按点选顺序取牌（槽位顺序 = 点击顺序）
@@ -55,18 +60,13 @@ function banned(G, c) {
   if (b.banType && c.def.type === b.banType) return true;
   return false;
 }
-const ctxBase = G => ({ recipes: G.recipes, lv: G.lv, helpers: G.helpers, disabled: G.boss && G.boss.noRepeat ? G.used : [], oneEach: !!(G.boss && G.boss.noRepeat), lastPlay: G.playsLeft === 1 });
+const ctxBase = G => ({ recipes: G.recipes, lv: G.lv, mods: G.mods, capUp: G.capUp, helpers: G.helpers, disabled: G.boss && G.boss.noRepeat ? G.used : [], oneEach: !!(G.boss && G.boss.noRepeat), lastPlay: G.playsLeft === 1, firstPlay: !G.cooks });
 
 // 求最优摆法：只给自动对局脚本用，玩家出牌不会自动排序
 function arrange(cards, ctx) {
   const ings = cards.filter(c => c.def.type === 'ing'), techs = cards.filter(c => c.def.type === 'tech');
   const eq = ctx.equipped.map(k => CARD_DEFS[k]);
-  const capOf = t => {
-    let c = BASE_CAP[t.key] || 1;
-    if (eq.some(d => d.techDouble === t.key)) c = Math.max(c, 2);
-    if (t.key === 'roast' && ctx.recipes.includes('kaoniurou')) c += 1;
-    return c;
-  };
+  const capOf = t => techCap(t.key, eq, ctx.capUp, ctx.helpers) + (t.key === 'roast' && ctx.recipes.includes('kaoniurou') ? 1 : 0);
   const caps = techs.map(capOf), groups = techs.map(() => []), rest = [];
   const layout = () => { const out = []; techs.forEach((t, i) => out.push(...groups[i], t)); return out.concat(rest); };
   let best = null, budget = 3000;
@@ -96,7 +96,7 @@ function previewSel(G, uids) {
   const nIng = food.filter(c => c.def.type === 'ing').length;
   const short = G.boss && G.boss.minIng && nIng > 0 && nIng < G.boss.minIng;
   // 挑剔食客不吃的牌：可以选、可以弃、也可以打出，但打出的这一锅整锅不得分（也没有小费和菜谱效果）
-  if (ban.length) res.ev = Object.assign({}, res.ev, { total: 0, lines: [], gold: 0, steps: [], keep: [], after: { slot: 0, draw: 0, swap: 0 }, spoiled: true });
+  if (ban.length) res.ev = Object.assign({}, res.ev, { total: 0, lines: [], gold: 0, steps: [], after: { slot: 0, draw: 0, swap: 0 }, spoiled: true });
   let why = '';
   if (over) why = 'over'; else if (short) why = 'short';
   else if (!res.ev.valid && sel.length) why = 'noing'; else if (ban.length) why = 'ban';
@@ -113,98 +113,87 @@ function bestOrder(G, uids) {
   return r.slots.map(c => c.uid).concat(eqs.map(c => c.uid), sps.map(c => c.uid));
 }
 
-// 用掉的牌从牌组里永久去掉（装备除外），想再用就得重新买；临时牌（双灶阿强复制的）不在牌组里
-const deckIdx = (G, c) => { const i = G.deck.findIndex((k, j) => k === c.key && G.stamps[j] === c.stamp); return i < 0 ? G.deck.indexOf(c.key) : i; };
-function consume(G, cards) {
-  cards.forEach(c => {
-    if (c.temp) return;
-    const i = deckIdx(G, c);
-    if (i >= 0) { G.deck.splice(i, 1); G.stamps.splice(i, 1); G.usedUp = (G.usedUp || 0) + 1; }
-  });
-}
+// 打出的牌不会用掉，都留在牌组里。牌在牌组里的位置：优先用发牌时记下的 di，测试里手造的牌按牌名 + 印记找
+const deckIdx = (G, c) => {
+  if (c.di != null && G.deck[c.di] === c.key) return c.di;
+  const i = G.deck.findIndex((k, j) => k === c.key && G.stamps[j] === c.stamp); return i < 0 ? G.deck.indexOf(c.key) : i;
+};
 // 出锅后每张牌的去向（纯函数，预览、动画、结算共用）：
-// to = 'gone' 用掉 / 'deck' 回牌组（下回合起才会摸到）/ 'dis' 回弃牌堆（本回合还能摸到）；key、stamp 是回去时的样子
+// 打出的牌都进弃牌堆（本回合不再摸到）；key、stamp、plus 是进弃牌堆时的样子
 // extra：牌组里新多出来的牌；temp：本回合临时牌（进弃牌堆，回合结束消失）
 function fatesOf(G, p) {
   const ev = p.ev, out = { cards: [], extra: [], temp: [] };
   const all = p.food.concat(p.sps);
-  if (!ev || ev.spoiled || !ev.valid) { all.forEach(c => out.cards.push({ c, to: 'gone', key: c.key, stamp: c.stamp, by: [] })); return out; }
+  const base = c => ({ c, key: c.key, stamp: c.stamp, plus: c.plus || 0, by: [] });
+  if (!ev || ev.spoiled || !ev.valid) { all.forEach(c => out.cards.push(base(c))); return out; }
   const H = new Set(G.helpers), eq = new Set(p.eqs.map(c => c.key)), F = new Map();
-  all.forEach(c => F.set(c.uid, { c, to: 'gone', key: c.key, stamp: c.stamp, by: [] }));
-  const set = (c, to, by, key, stamp) => {
+  all.forEach(c => F.set(c.uid, base(c)));
+  const set = (c, by, key, stamp) => {
     const f = F.get(c.uid); if (!f) return;
-    if (to === 'dis' || f.to === 'gone') f.to = to;   // 回弃牌堆比回牌组更好，优先
     if (key) f.key = key; if (stamp !== undefined) f.stamp = stamp; f.by.push(by);
   };
-  const dishOf = c => ev.dishes.find(d => d.ings.some(x => x.uid === c.uid));
+  const recOf = k => effRecipe(G.mods, k);
   const techOf = c => ev.dishes.filter(d => d.ings.some(x => x.uid === c.uid)).map(d => d.tech.key);   // 一份原料可能被好几个手法加工
   const ings = p.food.filter(c => c.def.type === 'ing'), techs = p.food.filter(c => c.def.type === 'tech');
   const live = c => !c.temp, sc = c => ev.cardScore[c.uid] || 0;
+  const kindMatch = (c, k) => k === 'veg' ? !!c.def.veg : k === 'meat' ? !!c.def.meat : c.key === k;
   const hit = new Set([].concat.apply([], ev.lines.map(l => l.uids)));
-  const fresh = s => s || 'fresh';
-  const room = () => true;   // 牌组不设上限
-  // 回锅肉：手法回弃牌堆（原有）
-  (ev.keep || []).forEach(u => { const c = p.food.find(x => x.uid === u); if (c) set(c, 'deck', '回锅'); });
+  // 手法特性：「烤」加工到的原料永久牌面分 +1（越烤越香）
+  ings.forEach(c => { const n = ev.dishes.filter(d => d.tech.key === 'roast' && d.ings.some(x => x.uid === c.uid)).length; if (n && live(c)) { F.get(c.uid).plus += n; F.get(c.uid).by.push('烤+' + n); } });
   // 印记
   all.forEach(c => {
-    if (c.stamp === 'keep') set(c, 'deck', '留');
-    if (c.stamp === 'dup') { set(c, 'deck', '双', null, null); if (live(c)) out.extra.push({ key: c.key, stamp: null, by: '双' }); }
+    if (c.stamp === 'dup') { set(c, '双', null, null); if (live(c)) out.extra.push({ key: c.key, stamp: null, by: '双' }); }
   });
-  if (H.has('fan')) all.forEach(c => { if (c.stamp === 'fresh') set(c, 'deck', '鲜→香', null, 'aroma'); else if (c.stamp === 'aroma') set(c, 'deck', '香→金', null, 'gold'); });
-  if (H.has('jin')) all.forEach(c => { if (c.stamp === 'gold') set(c, 'deck', '金留'); });
+  if (H.has('fan')) all.forEach(c => { if (c.stamp === 'fresh') set(c, '鲜→香', null, 'aroma'); else if (c.stamp === 'aroma') set(c, '香→金', null, 'gold'); });
   // 变牌
-  if (H.has('chen')) ings.forEach(c => { if (c.key === 'egg' && techOf(c).includes('mix')) set(c, 'deck', '→豆腐', 'tofu'); });
-  if (H.has('liu')) techs.forEach(c => { if (c.key === 'mix' && sc(c) > 0) set(c, 'deck', '→炒', 'stir'); });
-  if (H.has('ershen')) { const sg = ings.filter(c => c.key === 'scallion'); sg.forEach(c => set(c, 'deck', '葱留')); if (sg.some(live)) out.extra.push({ key: 'scallion', stamp: null, by: '二婶' }); }
-  if (H.has('zhou') && ings.length) {
-    const cnt = {}; G.deck.forEach(k => { if (CARD_DEFS[k].type === 'ing') cnt[k] = (cnt[k] || 0) + 1; });
-    const most = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || ING_KEYS.indexOf(a) - ING_KEYS.indexOf(b))[0];
-    const few = ings.filter(live).sort((a, b) => (cnt[a.key] || 0) - (cnt[b.key] || 0))[0];
-    if (most && few && few.key !== most) set(few, 'deck', '→' + CARD_DEFS[most].name, most);
-  }
-  if (H.has('mei') && p.sps.length) set(p.sps[0], 'deck', '→盐', 'salt');
+  if (H.has('chen')) ings.forEach(c => { if (c.key === 'egg' && techOf(c).includes('mix')) set(c, '→豆腐', 'tofu'); });
+  if (H.has('liu')) techs.forEach(c => { if (c.key === 'mix' && sc(c) > 0) set(c, '→炒', 'stir'); });
+  if (H.has('ershen')) { const sg = ings.filter(c => c.key === 'scallion'); if (sg.some(live)) out.extra.push({ key: 'scallion', stamp: null, by: '二婶' }); }
+  if (H.has('mei') && p.sps.length) set(p.sps[0], '→盐', 'salt');
   // 盖印
-  if (H.has('jiang')) { const c = ings.filter(c => hit.has(c.uid) && (!c.stamp || c.stamp === 'fresh')).sort((a, b) => sc(b) - sc(a))[0]; if (c) set(c, 'deck', '+香', null, 'aroma'); }
+  if (H.has('jiang')) { const c = ings.filter(c => hit.has(c.uid) && (!c.stamp || c.stamp === 'fresh')).sort((a, b) => sc(b) - sc(a))[0]; if (c) set(c, '+香', null, 'aroma'); }
   const closing = ctxBase(G).lastPlay || G.score + ev.total >= G.target;
-  if (H.has('huotou') && closing) techs.forEach(c => { if (sc(c) > 0) set(c, 'deck', c.stamp ? '法留' : '+鲜', null, fresh(c.stamp)); });
-  if (H.has('wang') && p.sps.length) { const c = ings.slice().sort((a, b) => sc(b) - sc(a))[0]; if (c) set(c, 'deck', c.stamp ? '料留' : '+鲜', null, fresh(c.stamp)); }
-  if (eq.has('cboard')) ings.forEach(c => { if (techOf(c).includes('cut')) set(c, 'deck', c.stamp ? '砧板留' : '+鲜', null, fresh(c.stamp)); });
-  // 留下
-  if (eq.has('steamer')) ings.forEach(c => { if (techOf(c).includes('steam')) set(c, 'deck', '蒸笼留'); });
-  if (H.has('apo') && ev.total * 2 >= G.target) p.food.forEach(c => set(c, 'deck', '打包'));
+  if (H.has('huotou') && closing) techs.forEach(c => { if (sc(c) > 0 && !c.stamp) set(c, '+鲜', null, 'fresh'); });
+  if (H.has('wang') && p.sps.length) { const c = ings.filter(c => !c.stamp).sort((a, b) => sc(b) - sc(a))[0]; if (c) set(c, '+鲜', null, 'fresh'); }
+  if (eq.has('cboard')) ings.forEach(c => { if (techOf(c).includes('cut') && !c.stamp) set(c, '+鲜', null, 'fresh'); });
+  if (H.has('hudan')) { const c = ings.find(c => c.key === 'egg' && !c.stamp); if (c) set(c, '+鲜', null, 'fresh'); }
   ev.lines.forEach(l => {
-    const f = fxOf(RECIPE_BY[l.key], G.lv[l.key] || 1);
-    if (f.keepIng) ings.forEach(c => { if (l.uids.includes(c.uid) && c.key === f.keepIng) set(c, 'deck', '泡发', null, 'keep'); });
-    if (f.spiceOut) out.extra.push({ key: 'chili', stamp: null, by: '葱油' });
+    const f = fxOf(recOf(l.key), G.lv[l.key] || 1);
+    if (f.stampPlayed) ings.filter(c => l.uids.includes(c.uid) && !c.stamp && !F.get(c.uid).stamp).forEach(c => set(c, '菜谱盖印', null, f.stampPlayed));
+    if (f.copyPlayed) (l.events || [l.uids]).forEach(us => {
+      const c = ings.find(c => us.includes(c.uid) && kindMatch(c, f.copyPlayed) && live(c));
+      if (c) out.extra.push({ key: c.key, stamp: null, by: '菜谱复制' });
+    });
+    if (f.spiceOut) for (let i = 0; i < l.n; i++) out.extra.push({ key: 'chili', stamp: null, by: '葱油' });
   });
-  // 回弃牌堆
-  if (H.has('sun')) { const c = techs.find(c => c.key === 'cut' && sc(c) > 0); if (c) set(c, 'deck', '切回'); }
-  if (H.has('dashen')) ings.filter(c => !dishOf(c)).slice(0, 2).forEach(c => set(c, 'deck', '生料回'));
-  if (H.has('qiang') && G.cooks === 0) ings.forEach(c => set(c, 'deck', '首次回'));
-  // 临时牌不在牌组里：回牌组就等于消失
-  F.forEach(f => { if (f.c.temp && f.to === 'deck') f.to = 'gone'; });
-  let n = 0; out.extra = out.extra.filter(() => room(n) && ++n);
+  if (H.has('yuguo')) ev.lines.filter(l => recOf(l.key).tech === 'deep').forEach(l => (l.events || [l.uids]).forEach(us => {
+    const c = ings.find(c => c.def.meat && us.includes(c.uid) && live(c));
+    if (c) out.extra.push({ key: c.key, stamp: null, by: '余锅复制' });
+  }));
   out.cards = all.map(c => F.get(c.uid));
   return out;
 }
 function applyFates(G, fa) {
   fa.cards.forEach(f => {
     const c = f.c;
-    if (f.to === 'gone') { consume(G, [c]); return; }
-    if (!c.temp) { const i = deckIdx(G, c); if (i >= 0) { G.deck[i] = f.key; G.stamps[i] = f.stamp || null; } }
-    if (f.to === 'dis') { c.key = f.key; c.def = CARD_DEFS[f.key]; c.stamp = f.stamp || null; G.discard.push(c); }
+    if (!c.temp) { const i = deckIdx(G, c); if (i >= 0) { G.deck[i] = f.key; G.stamps[i] = f.stamp || null; (G.plus = G.plus || [])[i] = f.plus || 0; c.di = i; } }
+    c.key = f.key; c.def = CARD_DEFS[f.key]; c.stamp = f.stamp || null; c.plus = f.plus || 0;
+    G.discard.push(c);
   });
+  // 新加进牌组的牌下回合才摸得到
   fa.extra.forEach(x => addCard(G, x.key, x.stamp));
   fa.temp.forEach(x => G.discard.push(Object.assign(mk(x.key), { temp: 1 })));
 }
 // 熟练度：每锅里触发一次算 1 次；到门槛就免费升一级，返回是否升级了
-const mastNext = (G, k) => CFG.mastery.find(t => t > (G.mast[k] || 0));
+const mastNext = (G, k) => CFG.mastery[(G.lv[k] || 1) - 1] || null;
 function addMastery(G, k) {
+  const lv = G.lv[k] || 1, need = mastNext(G, k);
+  if (!need) return false;
   G.mast[k] = (G.mast[k] || 0) + 1;
-  if (CFG.mastery.includes(G.mast[k])) { G.lv[k] = (G.lv[k] || 1) + 1; return true; }
+  if (G.mast[k] >= need) { G.lv[k] = lv + 1; G.mast[k] = 0; return true; }
   return false;
 }
-// 出牌：料理一锅，耗 1 次出牌；原料、手法、调料用掉就没了，装备进弃牌堆；每触发一个菜谱，客人给 1 小费
+// 出牌：料理一锅，耗 1 次出牌；打出的牌进弃牌堆（不会用掉，下回合还在牌组里）；每触发一个菜谱，客人给 1 小费
 function playSel(G, uids) {
   const p = previewSel(G, uids); if (!p.playable) return null;
   G.hand = G.hand.filter(c => !uids.includes(c.uid));
@@ -214,32 +203,32 @@ function playSel(G, uids) {
   G.score += ev.total; G.cooks++; G.bestCook = Math.max(G.bestCook || 0, ev.total); G.playsLeft--; G.coins += tip; G.tips += tip; G.earned += tip;
   ev.lines.forEach(l => { if (!G.used.includes(l.key)) G.used.push(l.key); });
   const mastered = ev.lines.filter(l => { let up = false; for (let i = 0; i < l.n; i++) up = addMastery(G, l.key) || up; return up; }).map(l => l.key);
+  p.eqs.forEach(c => G.discard.push(c));
   applyFates(G, fa);
-  const kept = fa.cards.filter(f => f.to === 'dis').map(f => f.c);
   G.slotCap += ev.after.slot; G.discardsLeft += ev.after.swap;
-  const r0 = G.reshuffles;
   const over = G.score >= G.target || G.playsLeft <= 0;   // 这回合结束了：不再补牌
   const drawn = over ? [] : draw(G, Math.max(0, G.handSize - G.hand.length) + ev.after.draw);
-  G.last = { ev, drawn, tip, mastered, kept: kept.map(c => c.uid), fates: fa, reshuffled: G.reshuffles > r0 };
+  G.last = { ev, drawn, tip, mastered, fates: fa };
   if (G.score >= G.target) clearRound(G); else checkStuck(G);
   return p;
 }
 
-function discardSel(G, uids) {     // 弃牌：选中的牌进弃牌堆，补同样张数
+function discardSel(G, uids) {     // 弃牌：选中的牌进弃牌堆，补同样张数（牌堆不够就少补）
   if (G.phase !== 'play' || G.discardsLeft <= 0 || !uids.length) return false;
+  if (uids.length > G.slotCap) return false;   // 一次最多弃槽位数那么多张
   const out = pick(G, uids); if (!out.length) return false;
   G.hand = G.hand.filter(c => !uids.includes(c.uid)); G.discard.push(...out);
-  const r0 = G.reshuffles; const drawn = draw(G, out.length); G.discardsLeft--;
-  G.last = { drawn, reshuffled: G.reshuffles > r0 };
+  const drawn = draw(G, out.length); G.discardsLeft--;
+  G.last = { drawn };
   checkStuck(G); return true;
 }
 
-// 失败：出牌次数用完；或手里没有能用的原料、也没法弃牌换
+// 失败：出牌次数用完；或手里没有能用的原料、牌堆也摸空了（弃牌堆本回合不洗回）
 function checkStuck(G) {
   if (G.phase !== 'play') return;
   if (G.playsLeft <= 0) return lose(G);
   const hasIng = G.hand.some(c => c.def.type === 'ing' && !banned(G, c));
-  if (!hasIng && !(G.discardsLeft > 0 && (G.pile.length || G.discard.length))) lose(G);
+  if (!hasIng && !(G.discardsLeft > 0 && G.pile.length)) lose(G);
 }
 function giveUp(G) { if (G.phase === 'play') lose(G); }
 function lose(G) { G.phase = 'over'; }
@@ -257,12 +246,13 @@ function clearRound(G) {
   G.coins += sum; G.earned += sum;
   G.history.push({ level: G.level, round: G.round, score: G.score, target: G.target, cooks: G.cooks, boss: G.boss && G.boss.key });
   G.levelDone = isBossRound(G);
+  G.won = G.levelDone && G.level >= CFG.levels;
   G.phase = 'shop'; G.rerolls = 0; G.shop = rollShop(G); G.market = []; G.packs = rollPacks(G); G.pack = null;
 }
 
 const ING_KEYS = ['egg', 'tomato', 'potato', 'mushroom', 'beef', 'tofu', 'shrimp', 'scallion'];
 const TECH_KEYS = ['fry', 'cut', 'deep', 'steam', 'roast', 'stir', 'mix'];
-const EQUIP_KEYS = ['pan', 'pot', 'oven', 'knife', 'wok', 'steamer', 'cboard'];
+const EQUIP_KEYS = Object.keys(CARD_DEFS).filter(k => CARD_DEFS[k].type === 'equip');
 const SPICE_KEYS = ['salt', 'soy', 'chili', 'sugar', 'vinegar', 'wine'];
 const recipePrice = (G, k) => RECIPE_BY[k].price + ((G.lv[k] || 1) - 1) * 2 + (G.recipes.includes(k) ? 1 : 0);
 // 商店：4 个精选（至少一条菜谱或升级）
@@ -294,9 +284,10 @@ function rollMarket(G) {
 function buyFrom(G, list, i) {
   const it = list && list[i]; if (!it || it.sold || G.coins < it.price) return false;
   if (it.kind === 'helper' && G.helpers.length >= CFG.maxHelpers) return false;
+  if (it.kind === 'recipe' && recipesFull(G)) return false;
   G.coins -= it.price; it.sold = true;
   if (it.kind === 'recipe') { G.recipes.push(it.key); G.lv[it.key] = 1; }
-  else if (it.kind === 'up') G.lv[it.key] = (G.lv[it.key] || 1) + 1;
+  else if (it.kind === 'up') { G.lv[it.key] = (G.lv[it.key] || 1) + 1; G.mast[it.key] = 0; }
   else if (it.kind === 'helper') G.helpers.push(it.key);
   else for (let k = 0; k < (it.n || 1); k++) addCard(G, it.key, it.stamp);
   // 菜谱买下后，同一条在本店里剩下的标签变成“升级”
@@ -308,8 +299,64 @@ const buyMarket = (G, i) => buyFrom(G, G.market, i);
 const rerollCost = G => CFG.rerollBase + (G.rerolls || 0);
 function reroll(G) { const c = rerollCost(G); if (G.phase !== 'shop' || G.coins < c) return false; G.coins -= c; G.rerolls++; G.shop = rollShop(G); return true; }
 // 去掉牌组里一张牌（精简包里用）
-function trim(G, i) { if (G.phase !== 'shop' || !(i in G.deck) || G.deck.length <= 8) return false; G.deck.splice(i, 1); G.stamps.splice(i, 1); return true; }
-function addCard(G, key, st) { G.deck.push(key); G.stamps.push(st || null); }
+function trim(G, i) { if (G.phase !== 'shop' || !(i in G.deck) || G.deck.length <= 8) return false; G.deck.splice(i, 1); G.stamps.splice(i, 1); if (G.plus) G.plus.splice(i, 1); return true; }
+function addCard(G, key, st) { G.deck.push(key); G.stamps.push(st || null); (G.plus = G.plus || [])[G.deck.length - 1] = 0; }
+
+// ===== 菜谱栏：上限 + 卖菜谱 =====
+const recipesFull = G => G.recipes.length >= CFG.maxRecipes;
+const sellPrice = (G, k) => Math.floor((RECIPE_BY[k].price + ((G.lv[k] || 1) - 1) * 2) / 2);
+function sellRecipe(G, k) {
+  const i = G.recipes.indexOf(k); if (G.phase !== 'shop' || i < 0) return false;
+  G.coins += sellPrice(G, k); G.recipes.splice(i, 1); delete G.lv[k]; delete G.mast[k]; delete G.mods[k];
+  // 商店里这道菜谱的“升级”变回“菜谱”
+  (G.shop || []).forEach(x => { if (!x.sold && x.kind === 'up' && x.key === k) { x.kind = 'recipe'; x.price = recipePrice(G, k); } });
+  return true;
+}
+
+// ===== 菜谱改良包：先挑 1 个改法（3 选 1），再挑一道自己的菜谱让它生效 =====
+// 改法和菜谱无关：比如「鲜虾换成牛肉」「去掉牛肉」。挑的菜谱里没有那样东西，就什么都不变
+// op：swapIng 换原料 / swapTech 换手法 / delIng 去掉原料 / delTech 去掉手法（变成任意手法）/ addIng 加一份原料（效果 ×2）
+// 包里每个改法单独抽稀有度：普通 = 换原料、换手法；稀有（CFG.modRare 的概率）= 去掉原料、去掉手法、加料（去掉原料最强，权重最低）
+const MOD_OPS = { common: [['swapIng', 3], ['swapTech', 2]], rare: [['delIng', 1], ['delTech', 2], ['addIng', 2]] };
+const RARE_OPS = new Set(['delIng', 'delTech', 'addIng']);
+const modText = o => o.op === 'swapIng' || o.op === 'swapTech' ? `「${nameOf(o.from)}」换成「${nameOf(o.to)}」`
+  : o.op === 'delIng' || o.op === 'delTech' ? `去掉「${nameOf(o.from)}」` : `多加一份「${nameOf(o.to)}」，效果 ×2`;
+// 把改法用到一道菜谱上，返回改完的 { ing, tech, x }；没有对应的东西就原样返回
+function applyModFx(r, o) {
+  const m = { ing: r.ing.slice(), tech: r.tech, x: r.x || 1 }, i = m.ing.indexOf(o.from);
+  if (o.op === 'swapIng' && i >= 0) m.ing[i] = o.to;
+  else if (o.op === 'delIng' && i >= 0) m.ing.splice(i, 1);
+  else if (o.op === 'swapTech' && m.tech === o.from) m.tech = o.to;
+  else if (o.op === 'delTech' && m.tech === o.from) m.tech = 'any';
+  else if (o.op === 'addIng') { m.ing.push(o.to); m.x = +(m.x * 2).toFixed(3); }
+  return m;
+}
+const modChanges = (r, o) => { const m = applyModFx(r, o); return m.tech !== r.tech || m.x !== (r.x || 1) || m.ing.join() !== r.ing.join(); };
+// 这个改法至少能改动自己的一道菜谱
+const modUseful = (G, o) => G.recipes.some(k => modChanges(effRecipe(G.mods, k), o));
+// rare：强制全是稀有（true）或全是普通（false），不传就按概率抽（测试用）
+function modFxOptions(G, n, rare) {
+  const pickR = a => a[Math.floor(G.r() * a.length)], out = [], seen = new Set();
+  const mine = G.recipes.map(k => effRecipe(G.mods, k));
+  const ownIng = [...new Set([].concat(...mine.map(r => r.ing)).filter(k => CARD_DEFS[k]))];
+  const ownTech = [...new Set(mine.map(r => r.tech).filter(k => CARD_DEFS[k]))];
+  for (let guard = 0; out.length < n && guard < 300; guard++) {
+    const ops = MOD_OPS[(rare == null ? G.r() < CFG.modRare : rare) ? 'rare' : 'common'];
+    const tot = ops.reduce((s, x) => s + x[1], 0); let x = G.r() * tot, op = ops[0][0];
+    for (const [k, w] of ops) { x -= w; if (x < 0) { op = k; break; } }
+    const tech = op === 'swapTech' || op === 'delTech', pool = tech ? TECH_KEYS : ING_KEYS, own = tech ? ownTech : ownIng;
+    // 大多数时候改的是自己菜谱里有的东西
+    const from = op === 'addIng' ? null : own.length && G.r() < .75 ? pickR(own) : pickR(pool);
+    const to = op === 'delIng' || op === 'delTech' ? null : pickR(pool.filter(k => k !== from));
+    const o = { kind: 'modfx', op, from, to, rare: RARE_OPS.has(op) ? 1 : 0 }, sig = op + from + to;
+    // 一道自己的菜谱都改不了的改法不出（菜谱栏是空的时候不限制）
+    if (!seen.has(sig) && (!G.recipes.length || modUseful(G, o))) { seen.add(sig); out.push(o); }
+  }
+  return out;
+}
+
+// 火候包：挑一种手法永久多加工 1 份，每种最多 CFG.heatMax 次
+const heatable = G => TECH_KEYS.filter(k => ((G.capUp || {})[k] || 0) < CFG.heatMax);
 
 // 帮厨伙计：辞退退一半钱
 function fire(G, key) { const i = G.helpers.indexOf(key); if (G.phase !== 'shop' || i < 0) return false; G.helpers.splice(i, 1); G.coins += Math.floor(HELPER_BY[key].price / 2); return true; }
@@ -321,24 +368,19 @@ function packOk(G, k) {
   if (k === 'up') return upLeft(G).length > 0;
   if (k === 'stamp') return stampable(G).length >= 2;
   if (k === 'trim') return G.deck.length > 12;
+  if (k === 'mod') return G.recipes.length > 0;
+  if (k === 'heat') return heatable(G).length > 0;
   return true;
 }
-// 包：每回合随机两种，牌组偏少时必有补货包
+// 包：每回合随机两种
 function rollPacks(G) {
   let ks = Object.keys(PACKS).filter(k => packOk(G, k)), out = [];
-  if (G.deck.length < CFG.lowDeck) { out.push('box'); ks = ks.filter(k => k !== 'box'); }
   while (out.length < 2 && ks.length) {
     const tot = ks.reduce((s, k) => s + PACKS[k].w, 0); let x = G.r() * tot, pickK = ks[ks.length - 1];
     for (const k of ks) { x -= PACKS[k].w; if (x < 0) { pickK = k; break; } }
     out.push(pickK); ks = ks.filter(k => k !== pickK);
   }
   return out.map(k => ({ kind: 'pack', key: k, price: PACKS[k].price, sold: false }));
-}
-function boxKeys(G) {
-  const nT = 2 + Math.floor(G.r() * 2), keys = [];
-  for (let i = 0; i < PACKS.box.show - nT; i++) keys.push(ING_KEYS[Math.floor(G.r() * ING_KEYS.length)]);
-  for (let i = 0; i < nT; i++) keys.push(TECH_KEYS[Math.floor(G.r() * TECH_KEYS.length)]);
-  return keys;
 }
 function openPack(G, i) {
   const it = G.packs[i], pk = it && PACKS[it.key];
@@ -352,8 +394,10 @@ function openPack(G, i) {
     items = shuffle(upLeft(G).slice(), G.r).slice(0, pk.show).map(u => ({ kind: 'upg', key: u.key }));
   } else if (it.key === 'stamp') {
     items = shuffle(stampable(G), G.r).slice(0, pk.show).map(j => ({ kind: 'stamp', i: j, key: G.deck[j], stamp: rollStamp(G) }));
-  } else if (it.key === 'box') {
-    items = boxKeys(G).map(k => ({ kind: 'card', key: k, stamp: null }));
+  } else if (it.key === 'heat') {
+    items = shuffle(heatable(G), G.r).slice(0, pk.show).map(k => ({ kind: 'heat', key: k }));
+  } else if (it.key === 'mod') {
+    items = modFxOptions(G, pk.show);
   } else if (it.key !== 'trim') {
     const keys = { ing: ING_KEYS, tech: TECH_KEYS, spice: SPICE_KEYS }[it.key];
     items = Array.from({ length: pk.show }, () => ({ kind: 'card', key: keys[Math.floor(G.r() * keys.length)], stamp: it.key !== 'spice' && G.r() < .35 ? rollStamp(G) : null }));
@@ -362,12 +406,17 @@ function openPack(G, i) {
   if (pk.all) { G.pack.items.forEach((x, j) => takeFromPack(G, j)); }
   return true;
 }
-function takeFromPack(G, j) {
+// 菜谱改良包要再传一道自己的菜谱 rk：改法用到这道菜谱上（没变化也算用掉了）
+function takeFromPack(G, j, rk) {
   const p = G.pack, it = p && p.items[j]; if (!it || it.taken || p.left <= 0) return false;
+  if (it.kind === 'recipe' && recipesFull(G)) return false;
+  if (it.kind === 'modfx' && (!G.recipes.includes(rk) || !modChanges(effRecipe(G.mods, rk), it))) return false;
   it.taken = true; p.left--;
-  if (it.kind === 'recipe') { G.recipes.push(it.key); G.lv[it.key] = 1; }
-  else if (it.kind === 'up') G.lv[it.key] = (G.lv[it.key] || 1) + 1;
+  if (it.kind === 'modfx') G.mods[rk] = applyModFx(effRecipe(G.mods, rk), it);
+  else if (it.kind === 'recipe') { G.recipes.push(it.key); G.lv[it.key] = 1; }
+  else if (it.kind === 'up') { G.lv[it.key] = (G.lv[it.key] || 1) + 1; G.mast[it.key] = 0; }
   else if (it.kind === 'upg') G.up[it.key]++;
+  else if (it.kind === 'heat') { G.capUp = G.capUp || {}; G.capUp[it.key] = (G.capUp[it.key] || 0) + 1; }
   else if (it.kind === 'stamp') G.stamps[it.i] = it.stamp;
   else addCard(G, it.key, it.stamp);
   p.items.forEach(x => { if (!x.taken && x.kind === 'recipe' && G.recipes.includes(x.key)) x.kind = 'up'; });
@@ -378,8 +427,9 @@ function trimFromPack(G, i) { const p = G.pack; if (!p || p.key !== 'trim' || p.
 function closePack(G) { G.pack = null; }
 function leaveShop(G, defer) {
   if (G.phase !== 'shop') return;
+  if (G.won) { G.phase = 'won'; return; }
   if (G.levelDone) { G.level++; G.round = 0; pickBoss(G); } else G.round++;
   G.pack = null; startRound(G, defer);
 }
 
-if (typeof module !== 'undefined') module.exports = { dealRound, fatesOf, ING_KEYS, TECH_KEYS, addMastery, mastNext, CARD_DEFS, RECIPES, BOSSES, HELPERS, UPGRADES, STAMPS, PACKS, CFG, fire, openPack, takeFromPack, trimFromPack, closePack, rollPacks, START_DECK, evaluate, arrange, bestOrder, newRun, previewSel, playSel, discardSel, buy, buyMarket, reroll, rerollCost, trim, leaveShop, targetFor, giveUp, banned, fxOf };
+if (typeof module !== 'undefined') module.exports = { modUseful, techCap, heatable, sellRecipe, sellPrice, recipesFull, modFxOptions, applyModFx, modChanges, modText, effRecipe, dealRound, fatesOf, ING_KEYS, TECH_KEYS, addMastery, mastNext, CARD_DEFS, RECIPES, BOSSES, HELPERS, UPGRADES, STAMPS, PACKS, CFG, fire, openPack, takeFromPack, trimFromPack, closePack, rollPacks, START_DECK, evaluate, arrange, bestOrder, newRun, previewSel, playSel, discardSel, buy, buyMarket, reroll, rerollCost, trim, leaveShop, targetFor, giveUp, banned, fxOf };

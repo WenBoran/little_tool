@@ -1,6 +1,6 @@
 /* 效果小标签：蓝=加分，红=倍率，紫=改规则（和小票上的「分 × 倍」同色） */
 .fxp { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 13px; line-height: 20px; color: #fff; white-space: nowrap; vertical-align: 1px}
-.fxp.c { background: var(--chip)} .fxp.m { background: var(--mult)} .fxp.r { background: var(--spice)}
+.fxp.c { background: var(--chip)} .fxp.m { background: var(--mult)} .fxp.r { background: var(--spice)} .fxp.repeat { min-width: 20px; justify-content: center; padding: 0 5px; font-size: 16px; }
 .rule .eq { background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 3px}
 .rule .eq .fxp { height: 19px; padding: 0 5px; font-size: 12px}
 .card.recipe .eff { background: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px}

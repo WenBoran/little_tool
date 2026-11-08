@@ -32,7 +32,7 @@ document.addEventListener('click', e => {
   const el = e.target.closest && e.target.closest('[data-fx]');
   if (!el) { hideFx(); return; }
   if (e.target.closest('button.buy')) return;                 // 点的是购买按钮，不弹效果
-  if (el.classList.contains('hslot')) return;             // 商店伙计由 u9 处理
+  if (el.classList.contains('hslot') || el.classList.contains('rslot')) return;   // 商店伙计、菜谱栏由 u9 处理
   const uid = el.dataset.uid;
   requestAnimationFrame(() => {
     const inPlay = el.closest('#hand, #slots');   // 手牌重绘会替换元素，按 uid 找回；商店、牌组窗口里的牌直接用
@@ -50,7 +50,7 @@ addEventListener('resize', hideFx);
 // 每张牌显示卡面（分数、图案、印记）+ 功能 + 印记效果；同样的牌合并计数
 function funcText(k) {
   const d = CARD_DEFS[k];
-  if (d.type === 'tech') return `加工 ${capOf({ key: k, def: d })} 份`;
+  if (d.type === 'tech') return `加工 ${capOf({ key: k, def: d })} 份${d.desc ? '，' + d.desc : ''}`;
   if (d.type === 'ing') return d.veg ? '蔬菜' : d.meat ? '荤菜' : '';
   return d.desc.replace('\n', '，');
 }
@@ -60,7 +60,7 @@ function deckGrid(list, pickable) {
       .sort((a, b) => a.key.localeCompare(b.key) || (a.stamp || '').localeCompare(b.stamp || ''));
     if (!cs.length) return '';
     return `<div class="pv-g"><div class="pv-t ${t}">${TYPE_NAME[t]} ${cs.length}</div><div class="fan">${cs.map(e => {
-      const ok = pickable && pickable(e), c = { uid: 0, key: e.key, def: CARD_DEFS[e.key], stamp: e.stamp };
+      const ok = pickable && pickable(e), c = { uid: 0, key: e.key, def: CARD_DEFS[e.key], stamp: e.stamp, plus: e.plus || 0 };
       const el = cardEl(c); el.dataset.i = e.i == null ? '' : e.i; if (pickable) { el.classList.add('pick'); if (!ok) el.classList.add('off'); }
       return el.outerHTML;
     }).join('')}</div></div>`;
@@ -87,11 +87,11 @@ function deckSheet(o) {
     <div class="btns"><button class="pill" id="go">${o.back}</button></div>`);
   document.querySelectorAll('#sheet .tabs .tab').forEach(b => b.onclick = () => o.onTab(b.dataset.t));
 }
-const deckEntries = () => G.deck.map((k, i) => ({ key: k, stamp: G.stamps[i], i }));
+const deckEntries = () => G.deck.map((k, i) => ({ key: k, stamp: G.stamps[i], plus: (G.plus || [])[i] || 0, i }));
 function showPiles(tab = 'pile') {
   if (busy || G.phase !== 'play') return;
-  const lists = { pile: G.pile.map(c => ({ key: c.key, stamp: c.stamp })), dis: G.discard.map(c => ({ key: c.key, stamp: c.stamp })), deck: deckEntries() };
-  const SUB = { pile: '还没摸到的牌', dis: '这回合弃掉的牌', deck: '' };
+  const lists = { pile: G.pile.map(c => ({ key: c.key, stamp: c.stamp, plus: c.plus })), dis: G.discard.map(c => ({ key: c.key, stamp: c.stamp, plus: c.plus })), deck: deckEntries() };
+  const SUB = { pile: '还没摸到的牌（摸空了本回合就没有了）', dis: '这回合打出和弃掉的牌，下回合洗回去', deck: '' };
   deckSheet({ tab, sub: SUB[tab], back: `${icon('flame')}回到灶台`, onTab: showPiles,
     tabs: [{ k: 'pile', name: '牌堆', n: lists.pile.length }, { k: 'dis', name: '弃牌堆', n: lists.dis.length }, { k: 'deck', name: '整副牌组', n: lists.deck.length }] });
   $('#dkList').innerHTML = deckGrid(lists[tab]); layoutFans();
@@ -101,8 +101,10 @@ $('#pile').addEventListener('click', () => showPiles('pile'));
 $('#dis').addEventListener('click', () => showPiles('dis'));
 ['pile', 'dis'].forEach(id => { const el = $('#' + id); el.tabIndex = 0; el.setAttribute('role', 'button');
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPiles(id); } }); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#veil').hidden && $('#sheet .tabs')) closeSheet(); });
-$('#veil').addEventListener('click', e => { if (e.target.id === 'veil' && $('#sheet .tabs')) closeSheet(); });
+// 牌堆、牌组窗口：按 Esc 或点窗口外面，和点下面的返回按钮一样（灶台上回灶台，商店里回商店）
+const backFromDeck = () => { const b = $('#sheet .tabs') && !$('#sheet .tab[data-t="trim"]') && $('#sheet #go'); if (b) b.click(); };   // 精简包挑牌时不响应，免得误点放弃
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#veil').hidden) backFromDeck(); });
+$('#veil').addEventListener('click', e => { if (e.target.id === 'veil') backFromDeck(); });
 addEventListener('resize', () => { if (document.querySelector('#dkList .fan')) layoutFans(); });
 
 // ===== 禁止整页拖动：只有窗口里本来就能滚的列表（牌组、说明、菜谱水牌）可以滑 =====

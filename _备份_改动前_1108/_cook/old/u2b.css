@@ -1,0 +1,50 @@
+/* 铸铁灶台 */
+#stove { position: relative; background: radial-gradient(ellipse at 50% 120%, rgba(224,138,76,.28), transparent 60%), linear-gradient(var(--iron-l), var(--iron));
+  border-radius: 18px; padding: 14px 20px 58px; min-height: 250px; color: var(--cream);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.08), inset 0 -4px 0 rgba(0,0,0,.35), 0 10px 22px -12px rgba(0,0,0,.7); }
+#stove::after { content: ""; position: absolute; left: 50%; bottom: 10px; width: 180px; height: 6px; margin-left: -90px; border-radius: 3px;
+  background: repeating-linear-gradient(90deg, rgba(224,138,76,.55) 0 12px, transparent 12px 18px); opacity: .5; transition: opacity .3s; }
+#stove.hot::after { opacity: 1; animation: glow 1.2s infinite alternate; }
+@keyframes glow { to { opacity: .55; } }
+#equips { position: absolute; left: 20px; top: 14px; display: flex; gap: 6px; }
+.eqchip { display: flex; align-items: center; gap: 3px; height: 28px; padding: 0 9px 0 5px; border-radius: 14px; background: rgba(215,225,231,.15); color: #B9CBD8; font: 600 13px var(--sans); }
+.eqchip .ic { width: 22px; height: 22px; }
+.eqchip.new { background: rgba(215,225,231,.32); outline: 1.5px dashed #B9CBD8; }
+#cap { position: absolute; right: 20px; top: 16px; display: flex; gap: 4px; }
+#cap i { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid rgba(251,246,236,.35); }
+#cap i.f { background: var(--ember); border-color: var(--ember); }
+#cap i.x { background: #C94A3A; border-color: #C94A3A; }
+#cap i.n { border-style: dashed; border-color: #B9CBD8; }
+#pot { position: relative; height: calc(var(--ch) + 30px); margin-top: 34px; }
+#slots { position: absolute; inset: 0 0 30px; }
+#slots .card { position: absolute; top: 0; transition: left .25s, transform .25s, opacity .25s; }
+#slots .hole { position: absolute; top: 0; width: var(--cw); height: var(--ch); border-radius: 12px; border: 2px dashed rgba(251,246,236,.18); transition: left .25s; }
+#slots .card.spare { opacity: .62; }
+#links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+#links path { fill: none; stroke: var(--ember); stroke-width: 2.5; stroke-linecap: round; }
+#links path.bad { stroke: rgba(251,246,236,.3); stroke-dasharray: 2 6; }
+#calc { position: absolute; left: 20px; right: 20px; bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; }
+#calc .eqn { font-size: 24px; font-variant-numeric: tabular-nums; }
+#calc .eqn em { font-style: normal; opacity: .55; margin: 0 5px; font-size: 18px; }
+#calc .tot { font-size: 34px; font-weight: 600; color: var(--gold); }
+#calc .tag { display: flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--rec); color: var(--cream); font-size: 15px; font-weight: 600; }
+#calc .warn { color: #F0A08F; font-size: 18px; }
+#stamp { position: absolute; left: 50%; top: 42%; font-size: 72px; font-weight: 600; color: var(--gold); z-index: 5; pointer-events: none; text-shadow: 0 3px 0 rgba(0,0,0,.35); animation: stamp .95s forwards; }
+@keyframes stamp { 0% { transform: translate(-50%, -20%) scale(.6); opacity: 0; } 25% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -110%); opacity: 0; } }
+
+/* 卡牌：米纸 + 双线框 */
+.card { width: var(--cw); height: var(--ch); border-radius: 12px; background: var(--face); position: relative; flex: none; padding: 10px 11px;
+  box-shadow: 0 1px 0 rgba(43,37,34,.25), 0 8px 14px -8px rgba(43,37,34,.6); user-select: none; touch-action: none; cursor: pointer; color: var(--ink);
+  --c: var(--ink); --t: var(--face-d); }
+.card.ing { --c: var(--ing); --t: var(--ing-t); } .card.tech { --c: var(--tech); --t: var(--tech-t); } .card.equip { --c: var(--equip); --t: var(--equip-t); }
+.card::before { content: ""; position: absolute; inset: 5px; border-radius: 8px; border: 1.5px solid var(--t); pointer-events: none; }
+.card::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 5px; height: 32%; border-radius: 0 0 8px 8px; background: var(--t); opacity: .55; pointer-events: none; }
+.card .nm { font-size: 22px; font-weight: 600; line-height: 1; position: relative; z-index: 1; }
+.card .pt { position: absolute; right: 8px; top: 7px; width: 28px; height: 28px; border-radius: 50%; background: var(--c); color: var(--cream); font: 600 15px/28px var(--sans); text-align: center; z-index: 1; }
+.card .art { position: absolute; left: 50%; top: 55%; width: 64px; height: 64px; margin: -32px 0 0 -32px; color: var(--c); z-index: 1; }
+.card .art .ic { stroke-width: 1.8; }
+.card .ft { position: absolute; left: 10px; right: 10px; bottom: 9px; display: flex; gap: 3px; align-items: center; justify-content: center; font: 600 11px var(--sans); color: var(--c); z-index: 1; }
+.card .ft i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.card .ft i.o { background: none; border: 1.5px solid var(--c); border-radius: 2px; }
+.card.lit { box-shadow: 0 0 0 3px var(--rec), 0 8px 14px -8px rgba(43,37,34,.6); }
+.card.equip .nm { font-size: 17px; }

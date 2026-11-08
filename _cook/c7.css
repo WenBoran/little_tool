@@ -274,7 +274,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
 #app { height: 100%; min-height: 0; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
 #main { min-height: 0; }
-@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } }
+@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } #ticket { margin-top: -8px; } }
 /* 弹窗高度按可见区域算（手机浏览器地址栏会让 vh 偏大） */
 #sheet { max-height: calc(100% - 32px); }
 #sheet.deckwin, #sheet.shopwin { height: 78vh; height: 78dvh; }

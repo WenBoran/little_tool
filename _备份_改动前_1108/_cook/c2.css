@@ -1,0 +1,77 @@
+#main { display: flex; flex-direction: column; gap: 14px; min-width: 0}
+
+/* 菜谱水牌：挂在铜杆上 */
+#rail { position: relative; padding-top: 6px; min-height: 150px}
+#rail::before { content: ""; position: absolute; left: -6px; right: -6px; top: 4px; height: 7px; border-radius: 4px;
+  background: linear-gradient(#E3C27E, #A97E32 60%, #7C5A20); box-shadow: 0 3px 4px rgba(40,20,5,.35)}
+#rules { position: relative; display: flex; gap: 12px; overflow-x: auto; overflow-y: visible; padding: 0 6px 12px; min-height: 144px; scrollbar-width: none}
+#rules::-webkit-scrollbar { display: none}
+#rules:empty::after { content: "还没有菜谱"; color: rgba(252,248,239,.6); padding: 40px 10px}
+.rule { flex: none; width: 70px; min-height: 128px; margin-top: 14px; border-radius: 6px 6px 12px 12px; position: relative;
+  background: linear-gradient(180deg, #F9EED8, #EBD8B4); color: var(--ink);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.55), inset 0 -5px 0 rgba(120,80,30,.12), 0 6px 0 -2px rgba(80,50,20,.35), 0 12px 16px -12px rgba(0,0,0,.6);
+  display: flex; flex-direction: column; align-items: center; padding: 10px 4px 8px; transform-origin: 50% -14px; animation: hang 6s ease-in-out infinite}
+.rule:nth-child(2n) { animation-delay: -2s} .rule:nth-child(3n) { animation-delay: -4s; animation-duration: 7s}
+@keyframes hang { 0%, 100% { transform: rotate(-.8deg)} 50% { transform: rotate(.8deg)} }
+.rule::before { content: ""; position: absolute; top: -14px; left: 50%; width: 2px; height: 16px; margin-left: -1px; background: #B5432F}
+.rule::after { content: ""; position: absolute; top: 4px; left: 50%; margin-left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #B5432F; box-shadow: inset 0 -2px 0 rgba(0,0,0,.25)}
+.rule .rc { display: flex; gap: 1px; margin-top: 6px}
+.rule .rc .ic { width: 21px; height: 21px}
+.rule .rc .i { color: var(--ing)} .rule .rc .t { color: var(--tech)}
+.rule .rn { writing-mode: vertical-rl; white-space: nowrap; font-size: 21px; letter-spacing: .06em; flex: 1; display: flex; align-items: center; margin: 4px 0}
+.rule .rn.l { font-size: 17px; letter-spacing: 0}
+.rule .eq { font-size: 13px; color: var(--cream); background: var(--rec); border-radius: 8px; padding: 1px 6px; white-space: nowrap}
+.rule .lv { position: absolute; left: -6px; top: 10px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold); color: var(--ink); font-size: 12px; line-height: 18px; box-shadow: 0 2px 0 var(--gold-d)}
+.rule .x { position: absolute; right: -8px; top: 8px; min-width: 24px; height: 24px; border-radius: 12px; background: var(--rec); color: var(--cream); font-size: 13px; line-height: 24px; text-align: center; padding: 0 5px; display: none; box-shadow: 0 2px 0 rgba(0,0,0,.25)}
+.rule.on { background: linear-gradient(180deg, #FFF3E8, #F6D3C2); animation: none; transform: translate(0, 6px) rotate(-4deg); transition: transform .25s}
+.rule.on .x { display: block; animation: popin .3s}
+.rule.off { opacity: .45; filter: grayscale(.8)}
+.rule.used::before { background: var(--mute)}
+.rule.flash { animation: ring .7s}
+@keyframes ring { 0% { transform: none} 15% { transform: rotate(12deg) scale(1.12)} 35% { transform: rotate(-9deg)} 55% { transform: rotate(5deg)} 75% { transform: rotate(-2deg)} 100% { transform: scale(1)} }
+@keyframes popin { from { transform: scale(0)} 70% { transform: scale(1.25)} }
+
+/* 铸铁灶台 */
+#stove { position: relative; border-radius: 22px; padding: 16px 22px 30px; min-height: 260px; color: var(--cream); isolation: isolate;
+  background: radial-gradient(ellipse 70% 60% at 50% 115%, rgba(238,138,72,.33), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 2px, transparent 2px 5px), linear-gradient(var(--iron-l), var(--iron) 70%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.1), inset 0 -6px 0 rgba(0,0,0,.4), 0 0 0 5px rgba(40,22,8,.25), 0 16px 26px -14px rgba(20,8,0,.8)}
+#stove::before { content: ""; position: absolute; top: 9px; right: 9px; bottom: 9px; left: 9px; border-radius: 15px; border: 1.5px solid rgba(255,255,255,.06); pointer-events: none}
+#stove.shake { animation: shake .45s}
+@keyframes shake { 20% { transform: translate(-6px, 2px)} 40% { transform: translate(5px, -3px)} 60% { transform: translate(-3px, 2px)} 80% { transform: translate(2px, -1px)} }
+#equips, #spices { position: absolute; top: 16px; display: flex; gap: 6px; z-index: 3}
+#equips { left: 22px} #spices { left: 50%; transform: translate(-50%, 0)}
+.chipx { display: flex; align-items: center; gap: 3px; height: 28px; padding: 0 10px 0 5px; border-radius: 14px; font-size: 14px; animation: popin .3s}
+.chipx .ic { width: 22px; height: 22px}
+.chipx.e { background: rgba(216,227,236,.14); color: #BCD0E0}
+.chipx.s { background: rgba(238,220,235,.16); color: #E8C9E5}
+.chipx.new { outline: 1.5px dashed currentColor}
+.chipx.hit { animation: hit .45s; background: var(--spice); color: var(--cream)}
+@keyframes hit { 40% { transform: scale(1.3)} }
+#pot { position: relative; height: calc(var(--ch) + 34px); margin-top: 40px; z-index: 2}
+#slots { position: absolute; top: 0; right: 0; left: 0; height: var(--ch)}
+#slots .card { position: absolute; top: 0; transition: left .3s cubic-bezier(.3, 1.3, .5, 1), opacity .2s}
+#slots .card.ghost { opacity: .88}
+#slots .card.ghost .cf { box-shadow: 0 0 0 2px rgba(252,248,239,.35)}
+#slots .hole { position: absolute; top: 0; width: var(--cw); height: var(--ch); border-radius: 14px; transition: left .3s;
+  background: radial-gradient(circle at 50% 50%, rgba(0,0,0,.22), rgba(0,0,0,.1) 70%); box-shadow: inset 0 3px 6px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.06)}
+#slots .card.spare { opacity: .55}
+#slots .card.lit .cf { box-shadow: 0 0 0 3px var(--rec), 0 0 18px rgba(181,67,47,.6)}
+#slots .card.score .cf { animation: jolt .32s}
+@keyframes jolt { 35% { transform: translateY(-14px) rotate(-3deg) scale(1.08)} }
+#links { position: absolute; top: 0; right: 0; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible}
+#links path { fill: none; stroke: var(--ember); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw .4s forwards}
+#links path.bad { stroke: rgba(252,248,239,.35); stroke-dasharray: 3 7; stroke-dashoffset: 0; animation: none}
+#links path.hit { stroke: #F37B63}
+@keyframes draw { to { stroke-dashoffset: 0} }
+#flame { position: absolute; left: 50%; bottom: 8px; transform: translate(-50%, 0); display: flex; gap: 14px; height: 20px; align-items: flex-end; z-index: 1}
+#flame i { width: 14px; height: 9px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%; background: radial-gradient(circle at 50% 80%, #FFE1A8, #F38B3E 55%, rgba(220,80,30,0) 75%);
+  opacity: .35; transform-origin: 50% 100%; transition: height .3s, opacity .3s}
+#stove.hot #flame i { height: 18px; opacity: .95; animation: flick .5s infinite alternate ease-in-out}
+#stove.roar #flame i { height: 30px}
+#flame i:nth-child(2n) { animation-delay: -.2s} #flame i:nth-child(3n) { animation-delay: -.35s; animation-duration: .4s}
+@keyframes flick { from { transform: scale(.85, 1)} to { transform: scale(1.1, 1.2)} }
+#warn { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-size: 22px; color: #FFB4A6; z-index: 4; pointer-events: none; text-shadow: 0 2px 0 rgba(0,0,0,.4)}
+#warn:not(:empty) { animation: popin .25s}
+#warn .ic { display: inline-block; width: 22px; height: 22px; vertical-align: -4px; margin-right: 4px}
+@media (max-width: 900px) { #warn { bottom: 4px; font-size: 18px} }

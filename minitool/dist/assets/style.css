@@ -27,7 +27,7 @@ b { font-weight: 400}
 #app { max-width: 1240px; min-height: 100vh; margin: 0 auto; padding: 16px 20px 14px; padding-top: calc(16px + var(--top-avoid, 0px)); display: grid; grid-gap: 18px; gap: 18px; grid-template-columns: 214px minmax(0, 1fr)}
 
 /* 左侧点菜小票 */
-#ticket { position: relative; align-self: start; position: sticky; top: 16px; background: var(--cream); border-radius: 6px 6px 0 0; padding: 26px 16px 22px; transform: rotate(-.6deg); box-shadow: 0 2px 0 rgba(43,36,32,.08), 0 18px 30px -18px rgba(40,20,5,.75); display: flex; flex-direction: column; gap: 12px}
+#ticket { position: relative; align-self: start; position: sticky; top: 0; background: var(--cream); border-radius: 6px 6px 0 0; padding: 26px 16px 22px; transform: rotate(-.6deg); box-shadow: 0 2px 0 rgba(43,36,32,.08), 0 18px 30px -18px rgba(40,20,5,.75); display: flex; flex-direction: column; gap: 12px}
 #ticket::after { content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 10px;
   background: linear-gradient(-45deg, transparent 6px, var(--cream) 6px) 0 0 / 12px 10px repeat-x, linear-gradient(45deg, transparent 6px, var(--cream) 6px) 0 0 / 12px 10px repeat-x}
 #ticket .clip { position: absolute; left: 50%; top: -9px; width: 64px; height: 22px; margin-left: -32px; border-radius: 6px;
@@ -365,7 +365,7 @@ b { font-weight: 400}
 
 /* 效果小标签：蓝=加分，红=倍率，紫=改规则（和小票上的「分 × 倍」同色） */
 .fxp { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 13px; line-height: 20px; color: #fff; white-space: nowrap; vertical-align: 1px}
-.fxp.c { background: var(--chip)} .fxp.m { background: var(--mult)} .fxp.r { background: var(--spice)}
+.fxp.c { background: var(--chip)} .fxp.m { background: var(--mult)} .fxp.r { background: var(--spice)} .fxp.repeat { min-width: 20px; justify-content: center; padding: 0 5px; font-size: 16px; }
 .rule .eq { background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 3px}
 .rule .eq .fxp { height: 19px; padding: 0 5px; font-size: 12px}
 .card.recipe .eff { background: none; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px}
@@ -887,7 +887,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
 #app { height: 100%; min-height: 0; overflow: hidden; grid-template-rows: minmax(0, 1fr); }
 #main { min-height: 0; }
-@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } }
+@media (max-width: 900px) { #app { grid-template-rows: auto minmax(0, 1fr); } #ticket { margin-top: -8px; } }
 /* 弹窗高度按可见区域算（手机浏览器地址栏会让 vh 偏大） */
 #sheet { max-height: calc(100% - 32px); }
 #sheet.deckwin, #sheet.shopwin { height: 78vh; height: 78dvh; }
@@ -1233,4 +1233,102 @@ body { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
 /* 重复触发类效果（再算一次）：同色描边 + 循环箭头，和普通加分区分 */
 .fxp.re { background: #FFF8EC !important; color: var(--chip); box-shadow: inset 0 0 0 2px var(--chip); }
 .fxp.re::before { content: '↻'; margin-right: 2px; font-weight: 700; }
+
+/* 2026-11-07：改良过的菜谱、商店菜谱栏（卖菜谱）、手法卡面标签 */
+.rule .md { position: absolute; left: -6px; bottom: 10px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--spice); color: #fff; font-size: 12px; line-height: 18px; box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+.rule.modded { box-shadow: inset 0 0 0 2px var(--spice); }
+.blk > header.sub2 { padding-top: 4px; }
+#sheet.shopwin .blk.hl .blk-in.rrow { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 6px; }
+.rslot { height: 46px; border-radius: 10px; background: var(--cream); color: var(--tech); display: flex; align-items: center; gap: 4px; padding: 0 6px; box-shadow: 0 3px 0 rgba(0,0,0,.2); font: inherit; min-width: 0; transition: transform .12s; }
+.rslot:hover { transform: translateY(-2px); }
+.rslot .ic { width: 22px; height: 22px; flex: none; }
+.rslot small { font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rslot.empty { background: none; border: 2px dashed rgba(252,248,239,.4); box-shadow: none; }
+.card.tech .cf.has-tg .plate { top: 44%; }
+@media (max-width: 600px) { .rslot { height: 38px; } .rslot small { font-size: 11px; } #sheet.shopwin .hslot { height: 40px; } }
+
+/* 菜谱栏压成一行 6 格（只显示手法图标，点开看名字），商店精选区不被挤小 */
+#sheet.shopwin .blk.hl .blk-in.rrow { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-gap: 6px; gap: 6px; padding-top: 4px; }
+#sheet.shopwin .blk.hl .blk-in { padding-top: 6px; padding-bottom: 8px; }
+#sheet.shopwin .hslot { height: 44px; padding: 6px; }
+.rslot { height: 34px; justify-content: center; padding: 0; }
+.rslot small { display: none; }
+#sheet.pkwin .ware .kind { display: block; color: var(--ink); font-size: 13px; text-shadow: none; }
+@media (max-width: 600px) { .rslot { height: 30px; } #sheet.shopwin .hslot { height: 36px; } }
+
+/* 商店：包区只占内容高度，多出来的高度给精选；伙计/菜谱放右侧整列 */
+.blk > header .rr { margin-left: auto; }
+#sheet.shopwin #packs { flex: none; align-content: start; padding-top: 8px; padding-bottom: 12px; }
+#sheet.shopwin .blk.purple { align-self: end; }
+@media (min-width: 601px) {
+  #sheet.shopwin .shop { grid-template-columns: minmax(0, 1fr) 250px; grid-template-rows: minmax(0, 1fr) auto; }
+  #sheet.shopwin .blk.wood { grid-column: 1; grid-row: 1; }
+  #sheet.shopwin .blk.purple { grid-column: 1; grid-row: 2; }
+  #sheet.shopwin .blk.hl { grid-column: 2; grid-row: 1 / 3; }
+  #sheet.shopwin .blk.hl .blk-in { flex: 1 1 0; }
+  #sheet.shopwin .blk.hl .blk-in.rrow { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 8px; gap: 8px; }
+  #sheet.shopwin .hslot { height: 52px; }
+  .rslot { height: 40px; }
+}
+@media (max-width: 600px) { #sheet.shopwin .shop { grid-template-rows: minmax(0, 1fr) auto auto; } }
+
+/* 包区横跨整行；伙计/菜谱和精选同高，内容居中不留大空隙 */
+@media (min-width: 601px) {
+  #sheet.shopwin .blk.hl { grid-column: 2; grid-row: 1; justify-content: center; }
+  #sheet.shopwin .blk.purple { grid-column: 1 / -1; grid-row: 2; }
+  #sheet.shopwin .blk.hl .blk-in { flex: none; }
+  #sheet.shopwin #packs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 菜谱改良包：改法卡（原来 → 换成），挑菜谱窗口里没变化的菜谱变淡 */
+.card.modfx { --cw: 96px; --ch: 134px; }
+.card.modfx .cf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 6px; background: linear-gradient(#F6EAF5, #E6CFE4); }
+.card.modfx .hds { font-size: 13px; color: #fff; background: var(--spice); border-radius: 9px; padding: 1px 8px; }
+.card.modfx .hnm { font-size: 12px; line-height: 1.3; text-align: center; color: var(--ink); }
+.mt-row { display: flex; align-items: center; gap: 4px; }
+.mt-ic { width: 30px; height: 30px; border-radius: 8px; padding: 4px; display: grid; place-items: center; }
+.mt-ic.ing { background: var(--ing-t); color: var(--ing); } .mt-ic.tech { background: var(--tech-t); color: var(--tech); }
+.mt-ic.del { background: #F3D6D0; color: #B5432F; font-size: 16px; font-weight: 700; }
+.mt-ar, .mt-plus { color: var(--spice); font-weight: 700; }
+.ware.mpick.same .ware-art { opacity: .5; filter: grayscale(.6); }
+#sheet.pkwin .ware.mpick .kind { display: block; color: var(--ink); font-size: 13px; text-shadow: none; }
+@media (max-width: 600px) { .card.modfx { --cw: 72px; --ch: 101px; } .card.modfx .hnm { font-size: 10px; } .mt-ic { width: 22px; height: 22px; padding: 3px; } }
+
+/* 稀有改良包：金色 */
+.pkb.mod { --c: var(--spice); }
+.pk-tx em.rare { font-style: normal; font-size: 11px; margin-left: 5px; padding: 0 6px; border-radius: 8px; background: var(--gold); color: var(--ink); vertical-align: 2px; }
+.card.modfx.rare .cf { background: linear-gradient(#FBF1D6, #F0D99A); }
+.card.modfx.rare .hds { background: var(--gold-d); }
+
+/* 改法卡加宽，文字一行放下；去掉的叉居中；菜谱改良包窗口加宽 */
+.card.modfx { --cw: 150px; --ch: 132px; }
+.card.modfx .hnm { font-size: 13px; white-space: nowrap; }
+.mt-ic.del { display: grid; place-items: center; padding: 6px; font-size: 0; }
+.mt-ic.del .ic { width: 100%; height: 100%; display: block; }
+#sheet.pkwin .ware:has(.card.modfx) { width: 156px; }
+#sheet.pkwin:has(.card.modfx) { max-width: min(94vw, 620px); }
+@media (max-width: 600px) { .card.modfx { --cw: 104px; --ch: 104px; } .card.modfx .hnm { font-size: 10px; } #sheet.pkwin .ware:has(.card.modfx) { width: 106px; } .mt-ic.del { padding: 4px; } }
+/* 电脑端计分小票往上挪一点 */
+@media (min-width: 901px) { #ticket { margin-top: -7px; } }
+
+/* 改法卡宽度要压过 .ware .card 的通用尺寸 */
+#sheet.pkwin .ware .card.modfx { --cw: 150px; --ch: 128px; }
+#sheet.pkwin .ware .card.modfx .hds { white-space: nowrap; font-size: 12px; }
+#sheet.pkwin .shelf.pkopen:has(.card.modfx) { flex-wrap: nowrap; }
+@media (max-width: 600px) {
+  #sheet.pkwin .ware .card.modfx { --cw: 108px; --ch: 112px; }
+  #sheet.pkwin .ware .card.modfx .hds { font-size: 10px; padding: 1px 5px; }
+  #sheet.pkwin .ware .card.modfx .hnm { font-size: 10px; white-space: normal; }
+  #sheet.pkwin .ware:has(.card.modfx) { width: 110px; }
+  #sheet.pkwin:has(.card.modfx) { max-width: calc(100vw - 12px); }
+}
+
+/* 改法说明可以折成两行（标题保持一行）；电脑端小票用相对定位往上挪（sticky 时负外边距不生效） */
+#sheet.pkwin .ware .card.modfx .hnm { white-space: normal; }
+@media (min-width: 901px) { #ticket { margin-top: 0; position: relative; top: -12px; } }
+
+/* 火候包 */
+.pkb.heat { --c: var(--tech); }
+.card.upg.heat { --c: var(--tech); --t: var(--tech-t); }
+.card.upg.heat .pkic { color: var(--cream); background: var(--tech); padding: 9px; }
 

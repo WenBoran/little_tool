@@ -1,0 +1,41 @@
+/* 牌桌下半区：牌堆 / 扇形手牌 / 出牌弃牌 */
+#board { display: grid; grid-template-columns: 96px 1fr 132px; gap: 16px; align-items: end; margin-top: auto; }
+#piles { display: flex; flex-direction: column; gap: 14px; align-items: center; padding-bottom: 6px; }
+.pile { position: relative; width: 60px; height: 84px; }
+.pile i { position: absolute; inset: 0; border-radius: 8px; background: var(--iron); border: 2px solid var(--wood-d);
+  background-image: repeating-linear-gradient(45deg, rgba(251,246,236,.06) 0 4px, transparent 4px 8px); }
+.pile i:nth-child(2) { transform: translate(3px, -3px); } .pile i:nth-child(3) { transform: translate(6px, -6px); }
+.pile i::after { content: ""; position: absolute; inset: 6px; border-radius: 4px; border: 1.5px solid rgba(217,178,106,.45); }
+.pile b { position: absolute; left: 50%; top: 50%; transform: translate(-38%, -62%); font-size: 26px; font-weight: 600; color: var(--gold); z-index: 1; }
+.pile.dis { width: 46px; height: 64px; }
+.pile.dis i { background: rgba(43,37,34,.18); border: 2px dashed rgba(43,37,34,.3); }
+.pile.dis i::after { display: none; }
+.pile.dis b { color: rgba(251,246,236,.75); font-size: 18px; transform: translate(-50%, -50%); }
+.pile.empty i:nth-child(n+2) { display: none; }
+
+#hand { position: relative; height: calc(var(--ch) + 46px); min-width: 0; }
+#hand .card { position: absolute; bottom: 4px; transform-origin: 50% 100%; transition: left .28s cubic-bezier(.3,1.2,.5,1), transform .2s, box-shadow .2s, opacity .25s; }
+#hand .card:hover, #hand .card:focus-visible { transform: translateY(-14px) rotate(var(--r)) !important; z-index: 40 !important; }
+#hand .card.sel { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--ember), 0 14px 18px -10px rgba(43,37,34,.7); }
+#hand .card.enter { animation: deal .38s backwards; }
+@keyframes deal { from { opacity: 0; translate: -340px 30px; rotate: -18deg; } }
+#hand .card.leave { opacity: 0; translate: 0 -120px; }
+#hand .card.toss { opacity: 0; translate: -300px 40px; rotate: -30deg; }
+#hand .count { position: absolute; right: 0; bottom: -2px; font: 600 12px var(--sans); color: rgba(251,246,236,.7); }
+
+#acts { display: flex; flex-direction: column; gap: 12px; padding-bottom: 6px; }
+.act { position: relative; height: 62px; border-radius: 14px; display: grid; grid-template-columns: 34px 1fr; align-items: center; padding: 0 12px; gap: 6px;
+  font-size: 22px; font-weight: 600; letter-spacing: .1em; transition: transform .1s, box-shadow .1s, filter .2s; }
+.act .ico { width: 30px; height: 30px; }
+.act .dots { position: absolute; left: 0; right: 0; bottom: -9px; display: flex; gap: 4px; justify-content: center; }
+.act .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--cream); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.act .dots i.u { background: rgba(43,37,34,.3); box-shadow: none; }
+.act.play { background: var(--ember); color: var(--ink); box-shadow: 0 5px 0 #9C5427; }
+.act.disc { background: var(--equip); color: var(--cream); box-shadow: 0 5px 0 #34495A; height: 52px; font-size: 19px; }
+.act:hover:not(:disabled) { transform: translateY(-2px); }
+.act.play:hover:not(:disabled) { box-shadow: 0 7px 0 #9C5427; } .act.disc:hover:not(:disabled) { box-shadow: 0 7px 0 #34495A; }
+.act:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.act:disabled { filter: grayscale(.85) brightness(.85); opacity: .6; cursor: default; }
+.act .ico .ic { stroke-width: 2.4; }
+
+#toast { position: fixed; left: 50%; bottom: 230px; transform: translateX(-50%); background: var(--iron); color: var(--cream); padding: 7px 16px; border-radius: 16px; font-size: 15px; z-index: 60; animation: rise .25s; }

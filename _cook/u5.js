@@ -247,6 +247,6 @@ function keepAwake() {
 }
 document.addEventListener('pointerdown', keepAwake, { capture: true, passive: true });
 // 主要按钮统一一声轻响
-document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.pill, .tab, #helpBtn'); if (b && !b.disabled) sfx.click(); }, true);
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.pill, .tab, .tg, #helpBtn'); if (b && !b.disabled) sfx.click(); }, true);
 function setMusic(v) { SET.music = v; saveSet(); getAC(); Music.on(v); }
 function setSfx(v) { SET.sfx = v; muted = !v; saveSet(); }

@@ -30,7 +30,7 @@ function playRound(G) {
       const keep = new Set(b ? b.uids : []);
       let out = G.hand.filter(c => !keep.has(c.uid) && c.def.type !== 'equip');
       if (!out.length) out = G.hand.filter(c => c.def.type !== 'equip').slice(0, 2);
-      out = out.sort((a, c) => (a.def.base || 0) - (c.def.base || 0)).slice(0, 4);
+      out = out.sort((a, c) => (a.def.base || 0) - (c.def.base || 0)).slice(0, Math.min(4, G.slotCap));
       if (out.length && K.discardSel(G, out.map(c => c.uid))) continue;
     }
     if (!b) { K.giveUp(G); break; }
@@ -51,8 +51,6 @@ function wantKey(G) {
 function shop(G) {
   const ingN = () => G.deck.filter(k => CARD_DEFS[k].type === 'ing').length;
   const low = () => G.deck.length < 26 || ingN() < 14;
-  // 1. 牌组太少先补货（补货包），再买精选里单卖的原料
-  for (let i = 0; i < G.packs.length; i++) { const it = G.packs[i]; if (it.key === 'box' && low() && G.coins >= it.price) { K.openPack(G, i); K.closePack(G); } }
   // 2. 订货：缺什么订什么
   if (POL !== 'none' && K.canOrder && K.canOrder(G)) {
     let k = null;
@@ -68,11 +66,16 @@ function shop(G) {
     if (it.kind === 'card' && CARD_DEFS[it.key].type !== 'equip' && !(low() && CARD_DEFS[it.key].type === 'ing')) continue;
     if ((it.kind === 'recipe' || it.kind === 'helper') && low() && G.coins < it.price + 6) continue;
     if (it.kind === 'helper' && G.helpers.length >= CFG.maxHelpers) continue;
+    // 菜谱栏满了：卖掉等级最低、最便宜的一道，换更贵的
+    if (it.kind === 'recipe' && K.recipesFull(G)) {
+      const worst = G.recipes.slice().sort((a, b) => ((G.lv[a] || 1) * RECIPE_BY[a].price) - ((G.lv[b] || 1) * RECIPE_BY[b].price))[0];
+      if (!worst || RECIPE_BY[worst].price >= RECIPE_BY[it.key].price) continue;
+      K.sellRecipe(G, worst);
+    }
     K.buy(G, i);
   }
   for (let i = 0; i < G.packs.length; i++) { const it = G.packs[i];
     if (it.sold || G.coins < it.price + 2 || it.key === 'trim' || it.key === 'stamp') continue;
-    if (it.key === 'box' && G.deck.length >= 34) continue;
     K.openPack(G, i); const p = G.pack; if (!p) continue;
     for (let j = 0; j < p.items.length && p.left > 0; j++) K.takeFromPack(G, j);
     K.closePack(G);
@@ -82,16 +85,16 @@ const DI = []; if (process.env.OV) eval(process.env.OV);
 const BD = {}; const S = { used: 0, pots: 0, deckAt: {}, orders: 0, orderCost: 0, waitTurns: 0, arrivedMid: 0 };
 const deaths = {}, coinsPer = []; let rounds = 0, earned = 0, lvSum = 0;
 for (let n = 0; n < N; n++) {
-  const G = K.newRun(1000 + n * 7919);
+  const G = K.newRun(1000 + (n + (+process.env.OFF || 0) * 100000) * 7919);
   let guard = 200;
-  while (G.phase !== 'over' && guard--) {
+  while (G.phase !== 'over' && G.phase !== 'won' && guard--) {
     playRound(G);
-    if (G.phase === 'shop') { rounds++; const d0 = G.deck.length; shop(G); S.bought = (S.bought||0) + G.deck.length - d0; K.leaveShop(G); const k = G.level + '-' + G.round; (S.deckAt[k] = S.deckAt[k] || []).push(G.deck.length); }
-    if (G.level > 6) break;
+    if (G.phase === 'shop') { rounds++; const d0 = G.deck.length; if (!G.won) shop(G); S.bought = (S.bought||0) + G.deck.length - d0; K.leaveShop(G); const k = G.level + '-' + G.round; (S.deckAt[k] = S.deckAt[k] || []).push(G.deck.length); }
   }
-  const L = G.phase === 'over' ? G.level : 7; if (G.phase==='over' && G.boss) BD[G.boss.key] = (BD[G.boss.key]||0)+1; if (G.phase==='over') { DI.push({stuck: G.playsLeft > 0 ? 1 : 0, lv:G.level, rd:G.round, deck:G.deck.length, plays:G.playsLeft, pct:G.score/G.target, recipes:G.recipes.length, ing:G.deck.filter(k=>CARD_DEFS[k].type==='ing').length}); } deaths[L] = (deaths[L] || 0) + 1; earned += G.earned; lvSum += G.level;
+  const L = G.won ? 'won' : G.level; if (G.phase==='over' && G.boss) BD[G.boss.key] = (BD[G.boss.key]||0)+1; if (G.phase==='over') { DI.push({stuck: G.playsLeft > 0 ? 1 : 0, lv:G.level, rd:G.round, deck:G.deck.length, plays:G.playsLeft, pct:G.score/G.target, recipes:G.recipes.length, ing:G.deck.filter(k=>CARD_DEFS[k].type==='ing').length}); } deaths[L] = (deaths[L] || 0) + 1; earned += G.earned; lvSum += G.level;
 }
 const pct = k => ((deaths[k] || 0) / N * 100).toFixed(0) + '%';
+console.log(`8 关通关 ${pct('won')}（${N} 局自动策略，仅作冒烟检查）`);
 console.log(`${POL.padEnd(5)} 死在第1关 ${pct(1)} 第2关 ${pct(2)} 第3关 ${pct(3)} 第4关 ${pct(4)} 第5+关 ${(Object.keys(deaths).filter(k => k >= 5).reduce((s, k) => s + deaths[k], 0) / N * 100).toFixed(0)}%  平均到第 ${(lvSum / N).toFixed(2)} 关  每回合 ${(earned / rounds).toFixed(1)} 钱  订单/局 ${(S.orders / N).toFixed(1)} 均价 ${(S.orderCost / Math.max(1, S.orders)).toFixed(1)}`);
 
 if (process.env.DIAG) { const g = {}; DI.forEach(d => { const k = d.lv + '-' + d.rd; g[k] = g[k] || []; g[k].push(d); }); Object.keys(g).sort().forEach(k => { const a = g[k], av = f => (a.reduce((s, d) => s + d[f], 0) / a.length).toFixed(2); console.log(k, a.length, 'deck', av('deck'), 'ing', av('ing'), 'plays', av('plays'), 'pct', av('pct'), 'rec', av('recipes'), 'stuck', av('stuck')); }); }

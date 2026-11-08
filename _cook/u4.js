@@ -20,17 +20,18 @@ function renderStove(p) {
     if (banned(G, c)) el.classList.add('ban');
   });
   old.forEach(e => e.remove());
-  // 出锅后不会用掉的牌：右上角紫色小牌子（回 = 回弃牌堆或牌组，→ = 变成别的牌，鲜/香/金 = 盖印记）
+  // 出锅后有变化的牌：紫色小牌子（→ = 变成别的牌，+鲜/香/金 = 盖印记，+1 = 烤过加分）
   const fa = p.playable && !anim ? fatesOf(G, p) : null, fm = new Map(fa ? fa.cards.map(f => [f.c.uid, f]) : []);
   box.querySelectorAll('.card').forEach(el => {
     const f = fm.get(+el.dataset.uid); let b = el.querySelector('.fate');
-    if (!f || f.to === 'gone') { if (b) b.remove(); return; }
+    const t = f && fateShort(f);
+    if (!t) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('b'); b.className = 'fate'; el.appendChild(b); }
-    b.textContent = fateShort(f);
+    b.textContent = t;
   });
   st.classList.toggle('hot', !!(p.playable && p.ev.valid && !p.ev.spoiled));
   st.classList.toggle('roar', !!(p.playable && p.ev.valid && p.ev.total >= (G.target - G.score)));
-  const W2 = { over: '槽位不够', ban: `${G.boss ? G.boss.rule : ''}`, short: `${G.boss ? G.boss.rule : ''}`, noing: '缺原料' };
+  const W2 = { over: '槽位不足', ban: `${G.boss ? G.boss.rule : ''}`, short: `${G.boss ? G.boss.rule : ''}`, noing: '缺原料' };
   $('#warn').innerHTML = p.why ? `${p.why === 'ban' ? icon('ban') : ''}${W2[p.why]}` : '';
 }
 // 加工连线：原料底部 → 手法底部的弧线。位置按牌的目标位置（style.left）算，不读动画中途的位置，
@@ -167,7 +168,7 @@ function renderActs(p) {
   pb.querySelector('.ico').innerHTML = icon('flame'); db.querySelector('.ico').innerHTML = icon('toss');
   pb.disabled = busy || !p.playable;
   pb.classList.toggle('ready', !pb.disabled);
-  db.disabled = busy || !sel.length || G.discardsLeft <= 0;
+  db.disabled = busy || !sel.length || G.discardsLeft <= 0 || sel.length > G.slotCap;   // 一次最多弃槽位数那么多张
 }
 function render() {
   sel = sel.filter(u => G.hand.some(c => c.uid === u));
